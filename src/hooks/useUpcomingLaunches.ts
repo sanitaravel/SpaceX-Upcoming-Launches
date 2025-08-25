@@ -1,9 +1,22 @@
 import { useEffect, useState, useRef } from "react";
 import type { LaunchTile } from "../types/launch";
 
-// Proxied endpoints through Vite dev server to avoid CORS during development
-const API_URL = "/api/spacex/tiles";
-const FUTURE_URL = "/api/spacex/future_missions.json";
+// Resolve endpoints differently for DEV vs PROD so Vite dev proxy works locally
+// while production (Vercel) fetches the canonical SpaceX/asset URLs directly.
+const DEV_API_TILES = "/api/spacex/tiles";
+const DEV_FUTURE = "/api/spacex/future_missions.json";
+const DEV_MISSIONS_BASE = "/api/spacex/missions";
+
+const PROD_API_TILES =
+  "https://content.spacex.com/api/spacex-website/launches-page-tiles/upcoming";
+const PROD_FUTURE =
+  "https://sxcontent9668.azureedge.us/cms-assets/future_missions.json";
+const PROD_MISSIONS_BASE =
+  "https://content.spacex.com/api/spacex-website/missions";
+
+const API_URL = import.meta.env.DEV ? DEV_API_TILES : PROD_API_TILES;
+const FUTURE_URL = import.meta.env.DEV ? DEV_FUTURE : PROD_FUTURE;
+const MISSIONS_BASE = import.meta.env.DEV ? DEV_MISSIONS_BASE : PROD_MISSIONS_BASE;
 
 export function useUpcomingLaunches(useMock = false) {
   const [data, setData] = useState<LaunchTile[] | null>(null);
@@ -90,15 +103,13 @@ export function useUpcomingLaunches(useMock = false) {
               if (link) {
                 const missionUrl = !useMock
                   ? "/api_mission.json"
-                  : `/api/spacex/missions/${encodeURIComponent(link)}`;
+                  : `${MISSIONS_BASE}/${encodeURIComponent(link)}`;
                 console.debug(
                   `[useUpcomingLaunches] fetching mission details for link=${link} url=${missionUrl}`
                 );
                 const mres = !useMock
                   ? await fetch("/api_mission.json")
-                  : await fetch(
-                      `/api/spacex/missions/${encodeURIComponent(link)}`
-                    );
+                  : await fetch(missionUrl);
                 if (mres.ok) {
                   const mission = await mres.json();
                   const webcasts = mission?.webcasts;

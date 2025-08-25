@@ -1,7 +1,6 @@
 User-agent: *
 Allow: /
 
-# Sitemap location (update with your full URL in production)
-# Replace example.com with your production domain
-Sitemap: https://example.com/sitemap.xml
+# Sitemap location (production)
+Sitemap: https://space-x-upcoming-launches.vercel.app/sitemap.xml
  
