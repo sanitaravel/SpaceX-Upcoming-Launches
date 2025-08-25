@@ -1,0 +1,131 @@
+@import "tailwindcss";
+
+:root {
+  /* Typography and sizing */
+  --accent: #ff7a00; /* orange accent */
+  --font-sans: 'D-DIN', Helvetica, Arial, system-ui, Avenir, sans-serif;
+  --font-title: 'D-DIN-Bold', 'D-DIN', Helvetica, Arial, system-ui, Avenir, sans-serif;
+  font-size: 18px; /* slightly larger base text */
+  line-height: 1.6;
+  font-weight: 400;
+
+  /* Colors (keep defaults but prefer Tailwind classes for complex theming)
+     color and background here are template defaults; component styles should
+     prefer utility classes. */
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.92);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  outline: none;
+  caret-color: transparent;
+}
+
+/*
+  D-DIN is a commercial font. To enable it locally, place webfont files under
+  `public/fonts/` named `D-DIN.woff2` and `D-DIN-Bold.woff2` (or update paths
+  below). The @font-face blocks below will prefer local system fonts first and
+  fall back to those files if present.
+*/
+
+@font-face {
+  font-family: 'D-DIN';
+  src: local('D-DIN'), local('D DIN'), url('/fonts/D-DIN.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'D-DIN-Bold';
+  src: local('D-DIN Bold'), local('D DIN Bold'), url('/fonts/D-DIN-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Roboto Mono for numeric displays */
+@font-face {
+  font-family: 'Roboto Mono';
+  src: local('Roboto Mono'), local('RobotoMono'), url('/fonts/Roboto-Mono.otf') format('opentype');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --font-mono: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', monospace;
+}
+
+/* helper for times */
+.time-mono {
+  font-family: var(--font-mono) !important;
+}
+
+a {
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: inherit;
+}
+a:hover {
+  color: #e46900;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+}
+
+#root {
+  width: 100%;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+  font-family: var(--font-title);
+}
+
+h2,h3,h4 {
+  font-family: var(--font-title);
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.75em 1.4em;
+  font-size: 1.05em;
+  font-weight: 600;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s, color 0.2s;
+}
+button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
