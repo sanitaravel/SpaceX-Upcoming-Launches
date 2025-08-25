@@ -1,16 +1,33 @@
 import LaunchList from './components/LaunchList'
 import Topbar from './components/Topbar'
+import BottomBar from './components/BottomBar'
+import { Route, Router } from 'wouter'
+import Privacy from './pages/Privacy'
+import Author from './pages/Author'
 
 function App() {
-  // enable mock data only during local development
-  const useMock = import.meta.env.DEV;
-
   return (
-    <main className="min-h-screen w-full">
-      {/* topbar contains site name and clocks */}
-      <Topbar />
-      <LaunchList useMock={useMock} />
-    </main>
+    <Router>
+      <div className="min-h-screen flex flex-col w-full">
+        <Topbar />
+
+  <main className="flex-1 px-6 py-6">
+          <Route path="/">
+            <LaunchList />
+          </Route>
+
+          <Route path="/privacy">
+            <Privacy />
+          </Route>
+
+          <Route path="/author">
+            <Author />
+          </Route>
+        </main>
+
+        <BottomBar />
+      </div>
+    </Router>
   )
 }
 

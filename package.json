@@ -17,7 +17,8 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "tailwindcss": "^4.1.12",
-    "vite-plugin-compression": "^0.5.1"
+    "vite-plugin-compression": "^0.5.1",
+    "wouter": "^3.7.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",

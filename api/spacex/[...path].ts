@@ -34,12 +34,22 @@ export default async function handler(req: Request) {
 
   let target: string = '';
 
-  if (path === 'tiles' || path === 'tiles/' || path === 'tiles') {
+  if (path === 'tiles' || path === 'tiles/') {
     target = `${SPACE_X_BASE}/api/spacex-website/launches-page-tiles/upcoming${search}`;
   } else if (path.startsWith('missions')) {
     // /api/spacex/missions/<rest>
     const rest = path.replace(/^missions\/?/, '');
-    target = `${SPACE_X_BASE}/api/spacex-website/missions/${rest}${search}`;
+    if (!rest) {
+      // missing mission id — return a client error with CORS headers
+      return new Response(JSON.stringify({ error: 'mission id missing in path' }), {
+        status: 400,
+        headers: makeCorsHeaders(originHeader),
+      });
+    }
+    // Forward to the canonical SpaceX missions endpoint exactly as requested
+    // e.g. /api/spacex/missions/sl-10-11 -> https://content.spacex.com/api/spacex-website/missions/sl-10-11
+    const encoded = encodeURIComponent(rest);
+    target = `${SPACE_X_BASE}/api/spacex-website/missions/${encoded}${search}`;
   } else if (path === 'future_missions.json') {
     target = `${FUTURE_MISSIONS_HOST}/cms-assets/future_missions.json${search}`;
   } else {

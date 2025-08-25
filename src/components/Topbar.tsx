@@ -1,4 +1,5 @@
 import useNow from '../hooks/useNow'
+import { Link } from 'wouter'
 
 function pad(n: number) {
   return n.toString().padStart(2, '0')
@@ -22,7 +23,11 @@ export default function Topbar() {
   const utc = new Date(now.getTime() + now.getTimezoneOffset() * 60000)
   return (
     <div className="flex items-center justify-between p-6">
-      <h1 className="text-2xl font-bold">SpaceX Upcoming Launches</h1>
+      <h1 className="text-2xl font-bold">
+        <Link href="/" className="!text-white !no-underline !hover:text-[var(--accent)] !transition-colors">
+            SpaceX Upcoming Launches
+        </Link>
+      </h1>
       <div className="flex flex-col items-end text-gray-600">
         <div className="whitespace-nowrap">
           <span className="text-xs text-gray-400 mr-2">UTC</span>

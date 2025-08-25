@@ -1,18 +1,15 @@
 import { useEffect, useState, useRef } from "react";
 import type { LaunchTile } from "../types/launch";
 
-// Resolve endpoints differently for DEV vs PROD so Vite dev proxy works locally
-// while production (Vercel) fetches the canonical SpaceX/asset URLs directly.
-// Use relative paths so the site can call /api/spacex/* on Vercel (Edge proxy)
 const API_URL = "/api/spacex/tiles";
 const FUTURE_URL = "/api/spacex/future_missions.json";
 const MISSIONS_BASE = "/api/spacex/missions";
 
-export function useUpcomingLaunches(useMock = false) {
+export function useUpcomingLaunches() {
   const [data, setData] = useState<LaunchTile[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // keep last serialized payload to avoid unnecessary state updates
+
   const lastSerializedRef = useRef<string | null>(null);
   const initialDoneRef = useRef(false);
 
@@ -26,40 +23,27 @@ export function useUpcomingLaunches(useMock = false) {
       const isFirst = !initialDoneRef.current;
       if (isFirst) setLoading(true);
       setError(null);
+
       try {
-        console.debug(
-          `[useUpcomingLaunches] fetching tiles - useMock=${useMock} url=${
-            useMock ? "/api_response_mokup.json" : API_URL
-          } `
-        );
-        const res = useMock
-          ? await fetch("/api_response_mokup.json")
-          : await fetch(API_URL);
+        console.debug(`[useUpcomingLaunches] fetching tiles url=${API_URL}`);
+        const res = await fetch(API_URL);
         if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
         const json = (await res.json()) as LaunchTile[];
-        // try to fetch future missions map (correlationId -> PrimaryLaunchDate)
+
         let futureMap: Record<string, any> | null = null;
         try {
-          console.debug(
-            `[useUpcomingLaunches] fetching future map - useMock=${useMock} url=${
-              useMock ? "/api_future_missions.json" : FUTURE_URL
-            }`
-          );
-          const fr = useMock
-            ? await fetch("/api_future_missions.json")
-            : await fetch(FUTURE_URL);
+          console.debug(`[useUpcomingLaunches] fetching future map url=${FUTURE_URL}`);
+          const fr = await fetch(FUTURE_URL);
           if (fr.ok) futureMap = await fr.json();
         } catch (e) {
-          // ignore missing future map
           futureMap = null;
         }
 
-        // Enrich each item: apply future_missions date (by correlationId) and fetch mission details for webcasts
         const enriched = await Promise.all(
           json.map(async (item) => {
-            let out: any = { ...item };
+            const out: any = { ...item };
 
-            // apply future_missions date override when available
+            // apply future_missions override if present
             try {
               const corr = (item as any).correlationId;
               if (
@@ -72,7 +56,6 @@ export function useUpcomingLaunches(useMock = false) {
                 const secs = Number(futureMap[corr].PrimaryLaunchDate.Seconds);
                 if (!Number.isNaN(secs) && secs > 0) {
                   const d = new Date(secs * 1000);
-                  // set launchDate in YYYY-MM-DD and launchTime in HH:MM:SS (UTC)
                   const y = d.getUTCFullYear();
                   const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
                   const day = String(d.getUTCDate()).padStart(2, "0");
@@ -87,27 +70,19 @@ export function useUpcomingLaunches(useMock = false) {
               // ignore per-item errors
             }
 
-            // fetch mission details to extract webcasts[0].videoId
+            // fetch mission details for webcast info
             try {
               const link = (item as any).link;
               if (link) {
-                const missionUrl = useMock
-                  ? "/api_mission.json"
-                  : `${MISSIONS_BASE}/${encodeURIComponent(link)}`;
+                const missionUrl = `${MISSIONS_BASE}/${encodeURIComponent(link)}`;
                 console.debug(
                   `[useUpcomingLaunches] fetching mission details for link=${link} url=${missionUrl}`
                 );
-                const mres = useMock
-                  ? await fetch("/api_mission.json")
-                  : await fetch(missionUrl);
+                const mres = await fetch(missionUrl);
                 if (mres.ok) {
                   const mission = await mres.json();
                   const webcasts = mission?.webcasts;
-                  if (
-                    Array.isArray(webcasts) &&
-                    webcasts.length > 0 &&
-                    webcasts[0]?.videoId
-                  ) {
+                  if (Array.isArray(webcasts) && webcasts.length > 0 && webcasts[0]?.videoId) {
                     const vid = webcasts[0].videoId;
                     out.webcastUrl = `https://x.com/SpaceX/status/${vid}`;
                   }
@@ -121,18 +96,13 @@ export function useUpcomingLaunches(useMock = false) {
           })
         );
 
-        // Only update state when the payload changed
         const serialized = JSON.stringify(enriched);
         if (!cancelled && serialized !== lastSerializedRef.current) {
-          console.info(
-            `[useUpcomingLaunches] data changed - updating state; items=${enriched.length}`
-          );
+          console.info(`[useUpcomingLaunches] data changed - updating state; items=${enriched.length}`);
           lastSerializedRef.current = serialized;
           setData(enriched);
         } else {
-          console.debug(
-            "[useUpcomingLaunches] fetched data identical to previous; skipping setData"
-          );
+          console.debug("[useUpcomingLaunches] fetched data identical to previous; skipping setData");
         }
       } catch (err: any) {
         if (!cancelled) setError(err?.message ?? "unknown");
@@ -145,7 +115,6 @@ export function useUpcomingLaunches(useMock = false) {
       }
     }
 
-    // initial fetch and periodic polling every 60s
     fetchData();
     const id = setInterval(() => {
       if (!running && !cancelled) fetchData();
@@ -155,7 +124,7 @@ export function useUpcomingLaunches(useMock = false) {
       cancelled = true;
       clearInterval(id);
     };
-  }, [useMock]);
+  }, []);
 
   return { data, loading, error };
 }
