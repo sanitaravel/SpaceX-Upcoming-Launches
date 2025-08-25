@@ -74,9 +74,24 @@ export function useUpcomingLaunches() {
             try {
               const link = (item as any).link;
               if (link) {
-                const missionUrl = `${MISSIONS_BASE}/${encodeURIComponent(link)}`;
+                // Normalize link into a single mission slug. Tiles sometimes contain
+                // values like "missions/starlinkg10-56" or "/missions/starlinkg10-56".
+                // We want just "starlinkg10-56" to avoid double "missions/" or
+                // encoded slashes which lead to upstream 404s.
+                let raw = String(link);
+                try {
+                  raw = decodeURIComponent(raw);
+                } catch (e) {
+                  // ignore decode errors and keep raw
+                }
+                if (raw.includes('/')) {
+                  const parts = raw.split('/').filter(Boolean);
+                  raw = parts[parts.length - 1];
+                }
+                const missionId = raw;
+                const missionUrl = `${MISSIONS_BASE}/${encodeURIComponent(missionId)}`;
                 console.debug(
-                  `[useUpcomingLaunches] fetching mission details for link=${link} url=${missionUrl}`
+                  `[useUpcomingLaunches] fetching mission details for link=${link} missionId=${missionId} url=${missionUrl}`
                 );
                 const mres = await fetch(missionUrl);
                 if (mres.ok) {
@@ -86,6 +101,8 @@ export function useUpcomingLaunches() {
                     const vid = webcasts[0].videoId;
                     out.webcastUrl = `https://x.com/SpaceX/status/${vid}`;
                   }
+                } else {
+                  console.debug(`[useUpcomingLaunches] mission fetch failed status=${mres.status} url=${missionUrl}`);
                 }
               }
             } catch (e) {

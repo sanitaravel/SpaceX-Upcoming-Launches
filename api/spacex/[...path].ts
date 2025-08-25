@@ -68,15 +68,32 @@ export default async function handler(req: Request) {
       },
     });
 
-    // clone headers and append CORS
+    // log mapping for debugging in Edge logs
+    try {
+      // eslint-disable-next-line no-console
+      console.log(`[spacex-proxy] ${req.method} ${url.pathname} -> ${target} [status: ${upstreamRes.status}]`);
+    } catch (e) {
+      // ignore logging failures in the edge runtime
+    }
+
+    // clone headers and append CORS + diagnostic headers
     const responseHeaders = new Headers(upstreamRes.headers);
     const cors = makeCorsHeaders(originHeader);
     cors.forEach((v, k) => responseHeaders.set(k, v));
 
+    // add simple diagnostic headers so callers (curl) can see the upstream target
+    responseHeaders.set('X-Upstream-URL', target);
+    responseHeaders.set('X-Upstream-Status', String(upstreamRes.status));
+    const upstreamContentType = upstreamRes.headers.get('content-type');
+    if (upstreamContentType) responseHeaders.set('X-Upstream-Content-Type', upstreamContentType);
+
     const body = upstreamRes.body;
     return new Response(body, { status: upstreamRes.status, headers: responseHeaders });
   } catch (err: any) {
+    // eslint-disable-next-line no-console
+    console.error('[spacex-proxy] error forwarding', err);
     const headers = makeCorsHeaders(originHeader);
+    headers.set('X-Proxy-Error', String(err?.message ?? err));
     return new Response(JSON.stringify({ error: String(err) }), { status: 502, headers });
   }
 }
