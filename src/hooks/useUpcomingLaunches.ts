@@ -45,31 +45,69 @@ export function useUpcomingLaunches() {
 
             // apply future_missions override if present
             try {
+              // console.debug(`[useUpcomingLaunches] processing item id=${item.id} name=${item.link}`);
               const corr = (item as any).correlationId;
-              if (
-                corr &&
-                futureMap &&
-                futureMap[corr] &&
-                futureMap[corr].PrimaryLaunchDate &&
-                futureMap[corr].PrimaryLaunchDate.Seconds
-              ) {
-                const secs = Number(futureMap[corr].PrimaryLaunchDate.Seconds);
-                if (!Number.isNaN(secs) && secs > 0) {
-                  const d = new Date(secs * 1000);
-                  const y = d.getUTCFullYear();
-                  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
-                  const day = String(d.getUTCDate()).padStart(2, "0");
-                  const hh = String(d.getUTCHours()).padStart(2, "0");
-                  const mins = String(d.getUTCMinutes()).padStart(2, "0");
-                  const ss = String(d.getUTCSeconds()).padStart(2, "0");
-                  out.launchDate = `${y}-${mm}-${day}`;
-                  out.launchTime = `${hh}:${mins}:${ss}`;
+              if (corr && futureMap && futureMap[corr]) {
+                // Prefer PrimaryLaunchDate, fall back to TZeroLaunchDate
+                const dateObj = futureMap[corr].PrimaryLaunchDate ?? futureMap[corr].TZeroLaunchDate;
+                if (dateObj && dateObj.Seconds) {
+                  const secsUtc = Number(dateObj.Seconds);
+                  if (!Number.isNaN(secsUtc) && secsUtc > 0) {
+                    const epochMs = secsUtc * 1000;
+
+                    // guess time zone from launch site (same heuristics as LaunchCard)
+                    const site: string | undefined = (item as any).launchSite;
+                    function guessTimeZone(site?: string) {
+                      if (!site) return "UTC";
+                      const s = site.toLowerCase();
+                      if (s.includes("starbase")) return "America/Chicago";
+                      if (
+                        s.includes("lc-39a") ||
+                        s.includes("launch complex 39") ||
+                        s.includes("kennedy") ||
+                        s.includes("florida")
+                      )
+                        return "America/New_York";
+                      if (s.includes("slc-40") || s.includes("cape")) return "America/New_York";
+                      if (s.includes("vandenberg") || s.includes("sbc") || s.includes("santa"))
+                        return "America/Los_Angeles";
+                      if (s.includes("vandy") || s.includes("sls") || s.includes("california"))
+                        return "America/Los_Angeles";
+                      if (s.includes("california")) return "America/Los_Angeles";
+                      return "UTC";
+                    }
+
+                    const tz = guessTimeZone(site);
+
+                    // Use Intl.DateTimeFormat to get the site's wall-clock components for the epoch
+                    const dtf = new Intl.DateTimeFormat("en-US", {
+                      timeZone: tz,
+                      year: "numeric",
+                      month: "2-digit",
+                      day: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                      hour12: false,
+                    });
+                    const parts = dtf.formatToParts(new Date(epochMs));
+                    const get = (type: string) => parts.find((p) => p.type === type)!.value;
+                    const y = Number(get("year"));
+                    const mm = get("month");
+                    const day = get("day");
+                    const hh = get("hour");
+                    const mins = get("minute");
+                    const ss = get("second");
+
+                    out.launchDate = `${y}-${mm}-${day}`;
+                    out.launchTime = `${hh}:${mins}:${ss}`;
+                  }
                 }
               }
             } catch (e) {
               // ignore per-item errors
             }
-
+            console.log(out)
             // fetch mission details for webcast info
             try {
               const link = (item as any).link;
