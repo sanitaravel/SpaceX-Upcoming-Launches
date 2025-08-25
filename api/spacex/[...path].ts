@@ -36,7 +36,7 @@ export default async function handler(req: Request) {
 
   if (path === 'tiles' || path === 'tiles/') {
     target = `${SPACE_X_BASE}/api/spacex-website/launches-page-tiles/upcoming${search}`;
-  } else if (path.startsWith('missions')) {
+  } else if (/^missions(?:\/|$)/.test(path)) {
     // /api/spacex/missions/<rest>
     const rest = path.replace(/^missions\/?/, '');
     if (!rest) {
