@@ -3,20 +3,10 @@ import type { LaunchTile } from "../types/launch";
 
 // Resolve endpoints differently for DEV vs PROD so Vite dev proxy works locally
 // while production (Vercel) fetches the canonical SpaceX/asset URLs directly.
-const DEV_API_TILES = "/api/spacex/tiles";
-const DEV_FUTURE = "/api/spacex/future_missions.json";
-const DEV_MISSIONS_BASE = "/api/spacex/missions";
-
-const PROD_API_TILES =
-  "https://content.spacex.com/api/spacex-website/launches-page-tiles/upcoming";
-const PROD_FUTURE =
-  "https://sxcontent9668.azureedge.us/cms-assets/future_missions.json";
-const PROD_MISSIONS_BASE =
-  "https://content.spacex.com/api/spacex-website/missions";
-
-const API_URL = import.meta.env.DEV ? DEV_API_TILES : PROD_API_TILES;
-const FUTURE_URL = import.meta.env.DEV ? DEV_FUTURE : PROD_FUTURE;
-const MISSIONS_BASE = import.meta.env.DEV ? DEV_MISSIONS_BASE : PROD_MISSIONS_BASE;
+// Use relative paths so the site can call /api/spacex/* on Vercel (Edge proxy)
+const API_URL = "/api/spacex/tiles";
+const FUTURE_URL = "/api/spacex/future_missions.json";
+const MISSIONS_BASE = "/api/spacex/missions";
 
 export function useUpcomingLaunches(useMock = false) {
   const [data, setData] = useState<LaunchTile[] | null>(null);
