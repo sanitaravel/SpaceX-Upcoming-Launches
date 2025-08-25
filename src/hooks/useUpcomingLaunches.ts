@@ -39,10 +39,10 @@ export function useUpcomingLaunches(useMock = false) {
       try {
         console.debug(
           `[useUpcomingLaunches] fetching tiles - useMock=${useMock} url=${
-            !useMock ? "/api_response_mokup.json" : API_URL
+            useMock ? "/api_response_mokup.json" : API_URL
           } `
         );
-        const res = !useMock
+        const res = useMock
           ? await fetch("/api_response_mokup.json")
           : await fetch(API_URL);
         if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
@@ -52,10 +52,10 @@ export function useUpcomingLaunches(useMock = false) {
         try {
           console.debug(
             `[useUpcomingLaunches] fetching future map - useMock=${useMock} url=${
-              !useMock ? "/api_future_missions.json" : FUTURE_URL
+              useMock ? "/api_future_missions.json" : FUTURE_URL
             }`
           );
-          const fr = !useMock
+          const fr = useMock
             ? await fetch("/api_future_missions.json")
             : await fetch(FUTURE_URL);
           if (fr.ok) futureMap = await fr.json();
@@ -101,13 +101,13 @@ export function useUpcomingLaunches(useMock = false) {
             try {
               const link = (item as any).link;
               if (link) {
-                const missionUrl = !useMock
+                const missionUrl = useMock
                   ? "/api_mission.json"
                   : `${MISSIONS_BASE}/${encodeURIComponent(link)}`;
                 console.debug(
                   `[useUpcomingLaunches] fetching mission details for link=${link} url=${missionUrl}`
                 );
-                const mres = !useMock
+                const mres = useMock
                   ? await fetch("/api_mission.json")
                   : await fetch(missionUrl);
                 if (mres.ok) {
