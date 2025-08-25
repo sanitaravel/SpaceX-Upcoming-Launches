@@ -13,6 +13,11 @@ export default defineConfig({
     viteCompression({ algorithm: 'brotliCompress', ext: '.br' }),
   ],
   server: {
+  // Expose dev server on the local network so other devices can connect
+  // Set to `true` to listen on all addresses (0.0.0.0)
+  host: true,
+  // Allow Vite to fall back to another port if the default is in use
+  strictPort: false,
     // Proxy SpaceX API calls through the dev server to avoid CORS during development.
     proxy: {
       // Tiles (upcoming launches)

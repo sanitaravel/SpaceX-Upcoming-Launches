@@ -3,4 +3,3 @@ Allow: /
 
 # Sitemap location (production)
 Sitemap: https://space-x-upcoming-launches.vercel.app/sitemap.xml
- 
