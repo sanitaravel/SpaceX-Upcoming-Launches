@@ -25,14 +25,12 @@ export function useUpcomingLaunches() {
       setError(null);
 
       try {
-        console.debug(`[useUpcomingLaunches] fetching tiles url=${API_URL}`);
         const res = await fetch(API_URL);
         if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
         const json = (await res.json()) as LaunchTile[];
 
         let futureMap: Record<string, any> | null = null;
         try {
-          console.debug(`[useUpcomingLaunches] fetching future map url=${FUTURE_URL}`);
           const fr = await fetch(FUTURE_URL);
           if (fr.ok) futureMap = await fr.json();
         } catch (e) {
@@ -45,37 +43,35 @@ export function useUpcomingLaunches() {
 
             // apply future_missions override if present
             try {
-              // console.debug(`[useUpcomingLaunches] processing item id=${item.id} name=${item.link}`);
               const corr = (item as any).correlationId;
               if (corr && futureMap && futureMap[corr]) {
                 // Prefer PrimaryLaunchDate, fall back to TZeroLaunchDate
+                // guess time zone from launch site (same heuristics as LaunchCard)
+                const site: string | undefined = (item as any).launchSite;
+                function guessTimeZone(site?: string) {
+                  if (!site) return "UTC";
+                  const s = site.toLowerCase();
+                  if (s.includes("starbase")) return "America/Chicago";
+                  if (
+                    s.includes("lc-39a") ||
+                    s.includes("launch complex 39") ||
+                    s.includes("kennedy") ||
+                    s.includes("florida")
+                  )
+                    return "America/New_York";
+                  if (s.includes("slc-40") || s.includes("cape")) return "America/New_York";
+                  if (s.includes("vandenberg") || s.includes("sbc") || s.includes("santa"))
+                    return "America/Los_Angeles";
+                  if (s.includes("vandy") || s.includes("sls") || s.includes("california"))
+                    return "America/Los_Angeles";
+                  if (s.includes("california")) return "America/Los_Angeles";
+                  return "UTC";
+                }
                 const dateObj = futureMap[corr].PrimaryLaunchDate ?? futureMap[corr].TZeroLaunchDate;
                 if (dateObj && dateObj.Seconds) {
                   const secsUtc = Number(dateObj.Seconds);
                   if (!Number.isNaN(secsUtc) && secsUtc > 0) {
                     const epochMs = secsUtc * 1000;
-
-                    // guess time zone from launch site (same heuristics as LaunchCard)
-                    const site: string | undefined = (item as any).launchSite;
-                    function guessTimeZone(site?: string) {
-                      if (!site) return "UTC";
-                      const s = site.toLowerCase();
-                      if (s.includes("starbase")) return "America/Chicago";
-                      if (
-                        s.includes("lc-39a") ||
-                        s.includes("launch complex 39") ||
-                        s.includes("kennedy") ||
-                        s.includes("florida")
-                      )
-                        return "America/New_York";
-                      if (s.includes("slc-40") || s.includes("cape")) return "America/New_York";
-                      if (s.includes("vandenberg") || s.includes("sbc") || s.includes("santa"))
-                        return "America/Los_Angeles";
-                      if (s.includes("vandy") || s.includes("sls") || s.includes("california"))
-                        return "America/Los_Angeles";
-                      if (s.includes("california")) return "America/Los_Angeles";
-                      return "UTC";
-                    }
 
                     const tz = guessTimeZone(site);
 
@@ -103,11 +99,113 @@ export function useUpcomingLaunches() {
                     out.launchTime = `${hh}:${mins}:${ss}`;
                   }
                 }
+                // If this is a Starlink mission, try to extract group numbers from the link
+                try {
+                  const mType = (item as any).missionType ?? futureMap[corr].missionType;
+                  if (typeof mType === "string" && mType.toLowerCase() === "starlink") {
+                    const linkRaw = String((item as any).link ?? "").toLowerCase();
+                    // look for patterns like '10-56' in 'starlinkg10-56' or 'sl-10-11' etc.
+                    const m = linkRaw.match(/(\d+)[-_](\d+)/);
+                    if (m && m[1] && m[2]) {
+                      const group = `${m[1]}-${m[2]}`;
+                      if (!String(out.title).includes(`Group ${group}`)) {
+                        out.title = `${out.title} (Group ${group})`;
+                      }
+                    }
+                  }
+                } catch (e) {
+                  // ignore
+                }
+                // capture paused/stopclock info when available
+                try {
+                  const paused = Boolean(futureMap[corr].TZeroPaused);
+                  out.tZeroPaused = paused;
+                  if (paused) {
+                    const tval = futureMap[corr].TZeroValue;
+                    let display: string | null = null;
+                    let tSeconds: number | undefined = undefined;
+                    if (typeof tval === "number") {
+                      tSeconds = Math.floor(tval);
+                      const n = tSeconds;
+                      const sign = n >= 0 ? "+" : "-";
+                      const abs = Math.abs(n);
+                      const hh = String(Math.floor(abs / 3600)).padStart(2, "0");
+                      const mm = String(Math.floor((abs % 3600) / 60)).padStart(2, "0");
+                      const ss = String(abs % 60).padStart(2, "0");
+                      display = `T${sign}${hh}:${mm}:${ss}`;
+                    } else if (typeof tval === "string") {
+                      const s = tval.trim();
+                      // If it looks like 'T-18:00:00' or similar, parse it
+                      const p = s.match(/^T([+-])(\d{1,2}):(\d{2}):(\d{2})$/i);
+                      if (p) {
+                        const sign = p[1] === "+" ? 1 : -1;
+                        const hh = Number(p[2]);
+                        const mmn = Number(p[3]);
+                        const ssn = Number(p[4]);
+                        tSeconds = sign * (hh * 3600 + mmn * 60 + ssn);
+                        display = s;
+                      } else {
+                        // If it's a numeric string, parse it as seconds
+                        const n = Number(s);
+                        if (!Number.isNaN(n)) {
+                          tSeconds = Math.floor(n);
+                          const sign = tSeconds >= 0 ? "+" : "-";
+                          const abs = Math.abs(tSeconds);
+                          const hh = String(Math.floor(abs / 3600)).padStart(2, "0");
+                          const mm = String(Math.floor((abs % 3600) / 60)).padStart(2, "0");
+                          const ss = String(abs % 60).padStart(2, "0");
+                          display = `T${sign}${hh}:${mm}:${ss}`;
+                        } else {
+                          display = s || null;
+                        }
+                      }
+                    } else {
+                      display = String(tval ?? null);
+                    }
+                    out.tZeroValue = display;
+                    if (typeof tSeconds === "number") {
+                      out._tZeroSeconds = tSeconds;
+                      try {
+                        // compute T epoch from current time and stopclock seconds
+                        const nowMs = Date.now();
+                        const targetEpochMs = nowMs - tSeconds * 1000;
+                        out._epochMs = targetEpochMs;
+
+                        // Recreate dtf for the site's timezone to extract wall-clock parts
+                        const dtfTarget = new Intl.DateTimeFormat("en-US", {
+                          timeZone: guessTimeZone(site),
+                          year: "numeric",
+                          month: "2-digit",
+                          day: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                          hour12: false,
+                        });
+                        const targetParts = dtfTarget.formatToParts(new Date(targetEpochMs));
+                        const getTarget = (type: string) => targetParts.find((p: Intl.DateTimeFormatPart) => p.type === type)!.value;
+                        const y2 = Number(getTarget("year"));
+                        const mm2 = getTarget("month");
+                        const day2 = getTarget("day");
+                        const hh2 = getTarget("hour");
+                        const mins2 = getTarget("minute");
+                        const ss2 = getTarget("second");
+                        out.launchDate = `${y2}-${mm2}-${day2}`;
+                        out.launchTime = `${hh2}:${mins2}:${ss2}`;
+                      } catch (e) {
+                        // ignore recalculation errors
+                      }
+                    }
+                  } else {
+                    out.tZeroValue = null;
+                  }
+                } catch (e) {
+                  // ignore
+                }
               }
             } catch (e) {
               // ignore per-item errors
             }
-            console.log(out)
             // fetch mission details for webcast info
             try {
               const link = (item as any).link;
@@ -128,9 +226,6 @@ export function useUpcomingLaunches() {
                 }
                 const missionId = raw;
                 const missionUrl = `${MISSIONS_BASE}/${encodeURIComponent(missionId)}`;
-                console.debug(
-                  `[useUpcomingLaunches] fetching mission details for link=${link} missionId=${missionId} url=${missionUrl}`
-                );
                 const mres = await fetch(missionUrl);
                 if (mres.ok) {
                   const mission = await mres.json();
@@ -139,8 +234,6 @@ export function useUpcomingLaunches() {
                     const vid = webcasts[0].videoId;
                     out.webcastUrl = `https://x.com/SpaceX/status/${vid}`;
                   }
-                } else {
-                  console.debug(`[useUpcomingLaunches] mission fetch failed status=${mres.status} url=${missionUrl}`);
                 }
               }
             } catch (e) {
@@ -153,11 +246,8 @@ export function useUpcomingLaunches() {
 
         const serialized = JSON.stringify(enriched);
         if (!cancelled && serialized !== lastSerializedRef.current) {
-          console.info(`[useUpcomingLaunches] data changed - updating state; items=${enriched.length}`);
           lastSerializedRef.current = serialized;
           setData(enriched);
-        } else {
-          console.debug("[useUpcomingLaunches] fetched data identical to previous; skipping setData");
         }
       } catch (err: any) {
         if (!cancelled) setError(err?.message ?? "unknown");

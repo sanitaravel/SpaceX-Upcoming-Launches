@@ -71,7 +71,6 @@ export default async function handler(req: Request) {
     // log mapping for debugging in Edge logs
     try {
       // eslint-disable-next-line no-console
-      console.log(`[spacex-proxy] ${req.method} ${url.pathname} -> ${target} [status: ${upstreamRes.status}]`);
     } catch (e) {
       // ignore logging failures in the edge runtime
     }
@@ -91,7 +90,6 @@ export default async function handler(req: Request) {
     return new Response(body, { status: upstreamRes.status, headers: responseHeaders });
   } catch (err: any) {
     // eslint-disable-next-line no-console
-    console.error('[spacex-proxy] error forwarding', err);
     const headers = makeCorsHeaders(originHeader);
     headers.set('X-Proxy-Error', String(err?.message ?? err));
     return new Response(JSON.stringify({ error: String(err) }), { status: 502, headers });

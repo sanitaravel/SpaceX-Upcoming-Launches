@@ -29,4 +29,8 @@ export interface LaunchTile {
   launchTime?: string | null
   imageDesktop?: ImageField | null
   imageMobile?: ImageField | null
+  // If the future_missions map indicates the T-zero is paused, this will be set
+  tZeroPaused?: boolean
+  // Human-readable stopclock value when paused (e.g. "T+00:05:12"), if available
+  tZeroValue?: string | null
 }

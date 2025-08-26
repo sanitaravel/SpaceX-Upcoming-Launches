@@ -1,5 +1,5 @@
 import type { LaunchTile } from "../types/launch";
-import { Clock, Rocket, Play, MapPin } from "lucide-react";
+import { Clock, Rocket, Play, MapPin, Pause } from "lucide-react";
 
 type Props = {
   launch: LaunchTile;
@@ -52,8 +52,14 @@ export default function LaunchCardDesktop({
           ) : null}
           {launch.vehicle && <div className="text-base text-gray-600 mt-2">Vehicle: {launch.vehicle}</div>}
 
-          {launchEpoch ? (
-            <div className="flex items-center gap-2 text-base text-[#ff7a00] mt-1">
+          {launch.tZeroPaused ? (
+            <div className="mt-2 inline-flex items-center gap-2 px-2 py-1 bg-[#ff7a00] text-[#242424] rounded-md text-base">
+              <Pause size={16} aria-hidden="false" aria-label="T-Zero paused" />
+              <span className="sr-only">T‑Zero Paused</span>
+              {launch.tZeroValue ? <span className="font-mono">{launch.tZeroValue}</span> : null}
+            </div>
+          ) : launchEpoch ? (
+            <div className="mt-2 inline-flex items-center gap-2 py-1 rounded-md text-base text-[#ff7a00]">
               <Clock size={20} />
               <span
                 className="text-base text-[#ff7a00]"
@@ -77,10 +83,10 @@ export default function LaunchCardDesktop({
             rel="noopener noreferrer"
             aria-label={`Watch ${launch.title} webcast`}
             className="w-25 h-25 bg-[#ff7a00] hover:bg-[#ff8b2a] rounded-md shadow flex flex-col items-center justify-center"
-            style={{ color: "#fff" }}
+            style={{ color: "#242424" }}
           >
-            <Play size={30} color="#fff" />
-            <span className="text-xl font-semibold leading-tight text-white">Watch</span>
+            <Play size={30} color="#242424" />
+            <span className="text-xl font-semibold leading-tight text-[#242424]">Watch</span>
           </a>
         </div>
       ) : null}

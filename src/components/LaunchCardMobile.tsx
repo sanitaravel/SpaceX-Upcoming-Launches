@@ -1,5 +1,5 @@
 import type { LaunchTile } from "../types/launch";
-import { Clock, Rocket, Play, MapPin } from "lucide-react";
+import { Clock, Rocket, Play, MapPin, Pause } from "lucide-react";
 
 type Props = {
   launch: LaunchTile;
@@ -36,8 +36,14 @@ export default function LaunchCardMobile({
             />
           </picture>
 
-          {launchEpoch ? (
-            <div className="mt-2 flex items-center gap-2 text-lg text-[#ff7a00]">
+          {launch.tZeroPaused ? (
+            <div className="mt-2 inline-flex items-center gap-2 px-2 py-1 bg-[#ff7a00] text-[#242424] rounded-md text-base">
+              <Pause size={14} aria-hidden="false" aria-label="T-Zero paused" />
+              <span className="sr-only">T‑Zero Paused</span>
+              {launch.tZeroValue ? <span className="font-mono text-base">{launch.tZeroValue}</span> : null}
+            </div>
+          ) : launchEpoch ? (
+            <div className="mt-2 inline-flex items-center gap-2 px-2 py-1 rounded-md text-lg text-[#ff7a00]">
               <Clock size={18} />
               <span
                 className="text-base text-[#ff7a00]"
@@ -86,10 +92,11 @@ export default function LaunchCardMobile({
               target="_blank"
               rel="noopener noreferrer"
               aria-label={`Watch ${launch.title} webcast`}
-              className="inline-flex items-center gap-2 px-3 py-2 bg-[#ff7a00] hover:bg-[#ff8b2a] text-white rounded-md shadow"
+              className="inline-flex items-center gap-2 px-3 py-2 bg-[#ff7a00] hover:bg-[#ff8b2a] rounded-md shadow"
+              style={{ color: "#242424" }}
             >
-              <Play size={18} color="#fff" />
-              <span className="font-semibold text-white">Watch</span>
+              <Play size={18} color="#242424" />
+              <span className="font-semibold text-[#242424]">Watch</span>
             </a>
           </div>
         ) : null}
