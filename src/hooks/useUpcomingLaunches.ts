@@ -263,7 +263,7 @@ export function useUpcomingLaunches() {
     fetchData();
     const id = setInterval(() => {
       if (!running && !cancelled) fetchData();
-    }, 60_000);
+    }, 10_000);
 
     return () => {
       cancelled = true;
