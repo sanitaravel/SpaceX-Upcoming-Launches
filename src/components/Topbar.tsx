@@ -20,7 +20,7 @@ export default function Topbar() {
       aria-label="Top bar"
       className="flex items-center justify-between p-3 sm:p-6 gap-3 w-full"
     >
-  <h1 className="flex-1 min-w-0 text-sm md:text-base lg:text-2xl font-bold">
+        <h1 className="flex-1 min-w-0 text-sm md:text-base lg:text-2xl font-bold">
         <Link
           href="/"
           aria-label="Home — SpaceX Upcoming Launches"
@@ -55,7 +55,9 @@ export default function Topbar() {
         {/* Local time with offset (second line) */}
         <div className="flex place-items-baseline whitespace-nowrap" aria-live="polite" aria-atomic="true">
           <span className="sr-only">Local time and timezone offset</span>
-          <span aria-hidden className="text-xs sm:text-xs text-gray-400 mr-1">LOCAL</span>
+          <span aria-hidden className="text-xs sm:text-xs text-gray-400 mr-1">
+            {Intl.DateTimeFormat().resolvedOptions().timeZone || 'Local'}
+          </span>
           <time
             dateTime={now.toISOString()}
             className="text-base sm:text-lg font-semibold time-mono"

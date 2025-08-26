@@ -1,12 +1,12 @@
 import { useEffect, useState, useRef } from "react";
-import type { LaunchTile } from "../types/launch";
+import type { LaunchTile, LaunchTileWithTimelines, TimelineBlock } from "../types/launch";
 
 const API_URL = "/api/spacex/tiles";
 const FUTURE_URL = "/api/spacex/future_missions.json";
 const MISSIONS_BASE = "/api/spacex/missions";
 
 export function useUpcomingLaunches() {
-  const [data, setData] = useState<LaunchTile[] | null>(null);
+  const [data, setData] = useState<LaunchTileWithTimelines[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,7 +39,7 @@ export function useUpcomingLaunches() {
 
         const enriched = await Promise.all(
           json.map(async (item) => {
-            const out: any = { ...item };
+            const out: any = { ...item } as LaunchTileWithTimelines;
 
             // apply future_missions override if present
             try {
@@ -233,6 +233,22 @@ export function useUpcomingLaunches() {
                   if (Array.isArray(webcasts) && webcasts.length > 0 && webcasts[0]?.videoId) {
                     const vid = webcasts[0].videoId;
                     out.webcastUrl = `https://x.com/SpaceX/status/${vid}`;
+                  }
+
+                  // Attach timeline blocks when available. The mission API sometimes
+                  // exposes preLaunchTimeline and postLaunchTimeline objects that
+                  // contain a timelineEntries array of events.
+                  try {
+                    const pre: TimelineBlock | null = mission?.preLaunchTimeline ?? null;
+                    const post: TimelineBlock | null = mission?.postLaunchTimeline ?? null;
+                    if (pre && pre.timelineEntries && Array.isArray(pre.timelineEntries)) {
+                      out.preLaunchTimeline = pre;
+                    }
+                    if (post && post.timelineEntries && Array.isArray(post.timelineEntries)) {
+                      out.postLaunchTimeline = post;
+                    }
+                  } catch (e) {
+                    // ignore timeline parsing errors
                   }
                 }
               }

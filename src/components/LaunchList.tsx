@@ -23,7 +23,8 @@ export default function LaunchList() {
   })
 
   return (
-    <div className="grid grid-cols-1 2xl:grid-cols-2 gap-4 auto-rows-min">
+    // Use auto-rows-fr so grid rows distribute remaining space equally; cards set h-full to fill row
+    <div className="grid grid-cols-1 2xl:grid-cols-2 gap-4 auto-rows-fr">
       {sorted.map((l) => (
         <LaunchCard key={l.id} launch={l} />
       ))}
