@@ -41,6 +41,13 @@ export default function LaunchCardMobile({
 
   if (launch.preLaunchTimeline?.timelineEntries) {
     allTimeline.push(...launch.preLaunchTimeline.timelineEntries.map((e) => ({ ...e, time: ensureSignedTime(e.time, true), description: sanitizeDescription(e.description) })));
+  } else {
+    // If no pre-launch timeline, add synthetic T-0 Liftoff event
+    allTimeline.push({
+      id: -1,
+      time: "T-00:00:00",
+      description: "Liftoff",
+    });
   }
   if (launch.postLaunchTimeline?.timelineEntries) {
     allTimeline.push(...launch.postLaunchTimeline.timelineEntries.map((e) => ({ ...e, time: ensureSignedTime(e.time, false), description: sanitizeDescription(e.description) })));
