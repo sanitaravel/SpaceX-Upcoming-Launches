@@ -53,6 +53,13 @@ export default function LaunchCardDesktop({
         description: sanitizeDescription(e.description),
       }))
     );
+  } else {
+    // If no pre-launch timeline, add synthetic T-0 Liftoff event
+    allTimeline.push({
+      id: -1,
+      time: "T-00:00:00",
+      description: "Liftoff",
+    });
   }
   if (launch.postLaunchTimeline?.timelineEntries) {
     allTimeline.push(
