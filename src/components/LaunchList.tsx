@@ -1,10 +1,20 @@
   import LaunchCard from './LaunchCard'
-import { useUpcomingLaunches } from '../hooks/useUpcomingLaunches'
+  import LaunchCardSkeleton from './LaunchCardSkeleton'
+  import { useUpcomingLaunches } from '../hooks/useUpcomingLaunches'
 
 export default function LaunchList() {
   const { data, loading, error } = useUpcomingLaunches()
 
-  if (loading) return <div className="p-6">Loading upcoming launches…</div>
+  if (loading)
+    return (
+      <div className="p-6">
+        <div className="grid grid-cols-2 gap-4">
+          {[0, 1, 2, 3].map((i) => (
+            <LaunchCardSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    )
   if (error) return <div className="p-6 text-red-600">Error: {error}</div>
   if (!data || data.length === 0) return <div className="p-6">No upcoming launches found.</div>
 
