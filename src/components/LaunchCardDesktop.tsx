@@ -10,6 +10,7 @@ type Props = {
   userTzLabel: string;
   launchEpoch: number | null;
   countdown: string;
+  missionId?: string;
 };
 
 export default function LaunchCardDesktop({
@@ -20,6 +21,7 @@ export default function LaunchCardDesktop({
   userTzLabel,
   launchEpoch,
   countdown,
+  missionId,
 }: Props) {
   // compute next upcoming timeline event (relative to launchEpoch)
   const now = useNow();
@@ -142,7 +144,13 @@ export default function LaunchCardDesktop({
         )}
 
         <div className="text-left flex flex-col">
-          <h2 className="text-xl font-semibold">{launch.title}</h2>
+          <h2 className="text-xl font-semibold">
+            {missionId ? (
+              <a href={`/launch/${encodeURIComponent(missionId)}`} className="hover:underline text-inherit">{launch.title}</a>
+            ) : (
+              launch.title
+            )}
+          </h2>
 
           <div className="text-base text-gray-500 flex items-center gap-2 mt-1">
             <Clock size={16} />

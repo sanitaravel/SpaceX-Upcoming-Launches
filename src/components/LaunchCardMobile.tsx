@@ -10,6 +10,7 @@ type Props = {
   userTzLabel: string;
   launchEpoch: number | null;
   countdown: string;
+  missionId?: string;
 };
 
 export default function LaunchCardMobile({
@@ -20,6 +21,7 @@ export default function LaunchCardMobile({
   userTzLabel,
   launchEpoch,
   countdown,
+  missionId
 }: Props) {
   const now = useNow();
   const allTimeline: TimelineEntry[] = [];
@@ -141,7 +143,13 @@ export default function LaunchCardMobile({
 
       <div className="mt-1 flex-1">
         <div className="relative z-10 overflow-visible h-full flex flex-col">
-          <h2 className="text-lg font-semibold">{launch.title}</h2>
+          <h2 className="text-lg font-semibold">
+            {missionId ? (
+              <a href={`/launch/${encodeURIComponent(missionId)}`} className="hover:underline text-inherit">{launch.title}</a>
+            ) : (
+              launch.title
+            )}
+          </h2>
 
           <div className="text-sm text-gray-500 flex items-center gap-2 mt-1">
             <Clock size={14} />

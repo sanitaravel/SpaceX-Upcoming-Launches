@@ -154,17 +154,33 @@ export default function LaunchCard({ launch }: { launch: LaunchTile }) {
     countdown,
   };
 
+  // derive mission id from the link field (use last path segment)
+  function missionIdFromLink(link?: string) {
+    if (!link) return String(launch.id);
+    try {
+      let raw = String(link);
+      raw = decodeURIComponent(raw);
+      if (raw.includes('/')) {
+        const parts = raw.split('/').filter(Boolean);
+        raw = parts[parts.length - 1];
+      }
+      return raw || String(launch.id);
+    } catch (e) {
+      return String(launch.id);
+    }
+  }
+
+  const missionId = missionIdFromLink(launch.link);
+
   return (
-    <>
-      {/* Mobile variant (visible on small screens) */}
+    <div className="block w-full">
       <div className="md:hidden">
-        <LaunchCardMobile {...common} />
+        <LaunchCardMobile {...common} missionId={missionId} />
       </div>
 
-      {/* Desktop variant (visible from md and up) */}
       <div className="hidden md:block">
-        <LaunchCardDesktop {...common} />
+        <LaunchCardDesktop {...common} missionId={missionId} />
       </div>
-    </>
+    </div>
   );
 }
