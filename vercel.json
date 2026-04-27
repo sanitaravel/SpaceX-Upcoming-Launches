@@ -2,5 +2,7 @@
   "version": 2,
   "rewrites": [
     { "source": "/api/spacex/:path*", "destination": "/api/spacex/[...path].ts" }
+    ,
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
