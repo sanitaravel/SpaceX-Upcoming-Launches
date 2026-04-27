@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { guessTimeZone } from "../utils/launchUtils";
 import type {
   LaunchTile,
   LaunchTileWithTimelines,
@@ -52,34 +53,6 @@ export function useUpcomingLaunches() {
                 // Prefer PrimaryLaunchDate, fall back to TZeroLaunchDate
                 // guess time zone from launch site (same heuristics as LaunchCard)
                 const site: string | undefined = (item as any).launchSite;
-                function guessTimeZone(site?: string) {
-                  if (!site) return "UTC";
-                  const s = site.toLowerCase();
-                  if (s.includes("starbase")) return "America/Chicago";
-                  if (
-                    s.includes("lc-39a") ||
-                    s.includes("launch complex 39") ||
-                    s.includes("kennedy") ||
-                    s.includes("florida")
-                  )
-                    return "America/New_York";
-                  if (s.includes("slc-40") || s.includes("cape"))
-                    return "America/New_York";
-                  if (
-                    s.includes("vandenberg") ||
-                    s.includes("sbc") ||
-                    s.includes("santa")
-                  )
-                    return "America/Los_Angeles";
-                  if (
-                    s.includes("vandy") ||
-                    s.includes("sls") ||
-                    s.includes("california")
-                  )
-                    return "America/Los_Angeles";
-                  if (s.includes("california")) return "America/Los_Angeles";
-                  return "UTC";
-                }
                 const dateObj =
                   futureMap[corr].PrimaryLaunchDate ??
                   futureMap[corr].TZeroLaunchDate;

@@ -2,6 +2,7 @@ import { Clock, Rocket, Play, MapPin, Pause, Flag } from "lucide-react";
 import type { TimelineEntry, LaunchTileWithTimelines } from "../types/launch";
 import { useEffect, useState } from "react";
 import useNow from "../hooks/useNow";
+import { ensureSignedTime, sanitizeDescription, parseOffsetSeconds } from "../utils/launchUtils";
 
 type Props = {
   launch: LaunchTileWithTimelines;
@@ -26,24 +27,6 @@ export default function LaunchCardMobile({
 }: Props) {
   const now = useNow();
   const allTimeline: TimelineEntry[] = [];
-  function ensureSignedTime(t?: string | null, isPre = false) {
-    if (!t) return t ?? null;
-    let s = String(t).trim();
-    // normalize cases like "- 00:53:00" or "T- 00:53:00" -> "-00:53:00" / "T-00:53:00"
-    s = s.replace(/^T([+-])\s+/, "T$1").replace(/^([+-])\s+/, "$1");
-    s = s.replace(/\s+/g, " ").trim();
-    if (/^[Tt][+-]/.test(s) || /^[+-]/.test(s)) return s.replace(/^([Tt]?)([+-])\s*/, "$1$2");
-    if (/^[Tt]\d/.test(s)) return (isPre ? "T-" : "T+") + s.slice(1);
-    return (isPre ? "T-" : "T+") + s;
-  }
-
-  function sanitizeDescription(d?: string | null) {
-    if (!d) return d ?? null;
-    let s = String(d).replace(/\bSpaceX\b/gi, "");
-    s = s.replace(/[\s\u00A0]+/g, " ").trim();
-    s = s.replace(/^[\s:–—-]+/, "");
-    return s || null;
-  }
 
   if (launch.preLaunchTimeline?.timelineEntries) {
     allTimeline.push(...launch.preLaunchTimeline.timelineEntries.map((e) => ({ ...e, time: ensureSignedTime(e.time, true), description: sanitizeDescription(e.description) })));
@@ -59,28 +42,7 @@ export default function LaunchCardMobile({
     allTimeline.push(...launch.postLaunchTimeline.timelineEntries.map((e) => ({ ...e, time: ensureSignedTime(e.time, false), description: sanitizeDescription(e.description) })));
   }
 
-  function parseOffsetSeconds(timeStr?: string | null) {
-    if (!timeStr) return NaN;
-    const s = String(timeStr).trim();
-    // Accept formats like T-00:01:12, -00:01:12, +00:01:12, 00:01:12
-    const m = s.match(/^T?([+-])?(\d{1,2}:)?(\d{1,2}):(\d{2})$/);
-    if (!m) return NaN;
-    const sign = m[1] === "-" ? -1 : 1;
-    const parts = s.replace(/^T/, "").replace(/^\+/, "").replace(/^\-/, "").split(":");
-    let hh = 0;
-    let mmn = 0;
-    let ss = 0;
-    if (parts.length === 3) {
-      hh = Number(parts[0]);
-      mmn = Number(parts[1]);
-      ss = Number(parts[2]);
-    } else if (parts.length === 2) {
-      mmn = Number(parts[0]);
-      ss = Number(parts[1]);
-    }
-    if ([hh, mmn, ss].some((n) => Number.isNaN(n))) return NaN;
-    return sign * (hh * 3600 + mmn * 60 + ss);
-  }
+  // helpers imported from ../utils/launchUtils
 
   const nextEvent = (() => {
     if (!launchEpoch || allTimeline.length === 0) return null as null | { entry: TimelineEntry; epoch: number };

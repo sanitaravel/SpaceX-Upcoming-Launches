@@ -4,68 +4,7 @@ import useNow from "../hooks/useNow";
 // icons are used in the platform-specific components
 import LaunchCardMobile from "./LaunchCardMobile";
 import LaunchCardDesktop from "./LaunchCardDesktop";
-
-function guessTimeZone(site?: string) {
-  if (!site) return "UTC";
-  const s = site.toLowerCase();
-  if (s.includes("starbase")) return "America/Chicago";
-  if (
-    s.includes("lc-39a") ||
-    s.includes("launch complex 39") ||
-    s.includes("kennedy") ||
-    s.includes("florida")
-  )
-    return "America/New_York";
-  if (s.includes("slc-40") || s.includes("cape")) return "America/New_York";
-  if (s.includes("vandenberg") || s.includes("sbc") || s.includes("santa"))
-    return "America/Los_Angeles";
-  if (s.includes("vandy") || s.includes("sls") || s.includes("california"))
-    return "America/Los_Angeles";
-  if (s.includes("california")) return "America/Los_Angeles";
-  return "UTC";
-}
-
-// Given wall-clock components and an IANA timeZone, compute epoch ms for that wall time.
-function epochFromWallTime(
-  year: number,
-  month: number,
-  day: number,
-  hour: number,
-  minute: number,
-  second: number,
-  timeZone: string
-) {
-  // Start with a UTC-based guess for the same numeric components
-  let guess = Date.UTC(year, month - 1, day, hour, minute, second);
-  // Iterate to adjust for tz offset at the target instant
-  for (let i = 0; i < 3; i++) {
-    const d = new Date(guess);
-    // find the offset (minutes) between UTC and target tz at this instant
-    const dtf = new Intl.DateTimeFormat("en-US", {
-      timeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-    });
-    const parts = dtf.formatToParts(d);
-    const get = (type: string) => parts.find((p) => p.type === type)!.value;
-    const y = Number(get("year"));
-    const m = Number(get("month"));
-    const dayp = Number(get("day"));
-    const h = Number(get("hour"));
-    const min = Number(get("minute"));
-    const sec = Number(get("second"));
-    const asUTC = Date.UTC(y, m - 1, dayp, h, min, sec);
-    const offset = asUTC - d.getTime(); // ms difference
-    // The wall time originally represents a UTC timestamp = guess - offset
-    guess = Date.UTC(year, month - 1, day, hour, minute, second) - offset;
-  }
-  return guess;
-}
+import { guessTimeZone, epochFromWallTime, missionIdFromLink } from "../utils/launchUtils";
 
 export default function LaunchCard({ launch }: { launch: LaunchTile }) {
   // pick the best available format: large > medium > small > thumbnail
@@ -155,22 +94,7 @@ export default function LaunchCard({ launch }: { launch: LaunchTile }) {
   };
 
   // derive mission id from the link field (use last path segment)
-  function missionIdFromLink(link?: string) {
-    if (!link) return String(launch.id);
-    try {
-      let raw = String(link);
-      raw = decodeURIComponent(raw);
-      if (raw.includes('/')) {
-        const parts = raw.split('/').filter(Boolean);
-        raw = parts[parts.length - 1];
-      }
-      return raw || String(launch.id);
-    } catch (e) {
-      return String(launch.id);
-    }
-  }
-
-  const missionId = missionIdFromLink(launch.link);
+  const missionId = missionIdFromLink(launch.link, String(launch.id));
 
   return (
     <div className="block w-full">
