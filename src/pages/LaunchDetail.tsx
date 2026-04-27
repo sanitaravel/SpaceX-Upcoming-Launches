@@ -19,6 +19,34 @@ export default function LaunchDetail() {
 
     const [pausedSnapshot, setPausedSnapshot] = useState<null | { description?: string | null; time?: string | null }>(null);
 
+    // user's IANA timezone label for display (used in timestamp template)
+    const userTzLabel = (() => {
+        try {
+            return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+        } catch (e) {
+            return "";
+        }
+    })();
+
+    function formatWithUserTz(ms?: number | null) {
+        if (!ms) return "";
+        try {
+            const d = new Date(ms);
+            const s = new Intl.DateTimeFormat(undefined, {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: false,
+            }).format(d);
+            return userTzLabel ? `${s} [${userTzLabel}]` : s;
+        } catch (e) {
+            return new Date(ms).toLocaleString();
+        }
+    }
+
     // build timeline (safe to run even if `launch` is null)
     const timeline: { entry: TimelineEntry; epoch: number }[] = [];
     const timelineEntries: TimelineEntry[] = [];
@@ -120,7 +148,7 @@ export default function LaunchDetail() {
                             </div>
                             <div>
                                 <dt className="font-medium text-slate-200">Launch Time</dt>
-                                <dd className="text-slate-300">{launchEpoch ? new Date(launchEpoch).toLocaleString() : "—"}</dd>
+                                <dd className="text-slate-300">{launchEpoch ? formatWithUserTz(launchEpoch) : "—"}</dd>
                             </div>
                         </dl>
                         {launch.webcastUrl ? (
@@ -189,7 +217,7 @@ export default function LaunchDetail() {
                                         </div>
                                         <div className="flex-1">
                                             <div className="text-sm font-medium">{e.description}</div>
-                                            <div className="text-xs text-gray-500 font-mono">{e.time} {epoch ? <span>• {new Date(epoch).toLocaleString()}</span> : null}</div>
+                                            <div className="text-xs text-gray-500 font-mono">{e.time} {epoch ? <span>• {formatWithUserTz(epoch)}</span> : null}</div>
                                         </div>
                                     </div>
                                 );
@@ -208,7 +236,7 @@ export default function LaunchDetail() {
                                     <div key={e.id} className="flex items-start gap-4 justify-end">
                                         <div className="flex-1 text-right">
                                             <div className="text-sm font-medium">{e.description}</div>
-                                            <div className="text-xs text-gray-500 font-mono">{e.time} {epoch ? <span>• {new Date(epoch).toLocaleString()}</span> : null}</div>
+                                            <div className="text-xs text-gray-500 font-mono">{e.time} {epoch ? <span>• {formatWithUserTz(epoch)}</span> : null}</div>
                                         </div>
                                         <div className="w-3 flex-shrink-0">
                                             <div className={isPassed ? "h-3 w-3 rounded-full bg-[#ff7a00] mt-1" : "h-3 w-3 rounded-full border border-slate-600 mt-1 bg-transparent"} />
