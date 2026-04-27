@@ -134,15 +134,23 @@ export default function LaunchDetail() {
   // build timeline (safe to run even if `launch` is null)
   const timeline: { entry: TimelineEntry; epoch: number }[] = [];
   const timelineEntries: TimelineEntry[] = [];
+  const preTimelineEntries: TimelineEntry[] = [];
+  const postTimelineEntries: TimelineEntry[] = [];
   let launchEpoch: number | null = null;
   if (launch) {
     if (launch.preLaunchTimeline?.timelineEntries) {
-      timelineEntries.push(...launch.preLaunchTimeline.timelineEntries.map((e) => ({ ...e, time: ensureSignedTime(e.time, true), description: sanitizeDescription(e.description) })));
+      const mapped = launch.preLaunchTimeline.timelineEntries.map((e) => ({ ...e, time: ensureSignedTime(e.time, true), description: sanitizeDescription(e.description) }));
+      timelineEntries.push(...mapped);
+      preTimelineEntries.push(...mapped);
     } else {
-      timelineEntries.push({ id: -1, time: "T-00:00:00", description: "Liftoff" });
+      const liftoff = { id: -1, time: "T-00:00:00", description: "Liftoff" } as TimelineEntry;
+      timelineEntries.push(liftoff);
+      preTimelineEntries.push(liftoff);
     }
     if (launch.postLaunchTimeline?.timelineEntries) {
-      timelineEntries.push(...launch.postLaunchTimeline.timelineEntries.map((e) => ({ ...e, time: ensureSignedTime(e.time, false), description: sanitizeDescription(e.description) })));
+      const mapped = launch.postLaunchTimeline.timelineEntries.map((e) => ({ ...e, time: ensureSignedTime(e.time, false), description: sanitizeDescription(e.description) }));
+      timelineEntries.push(...mapped);
+      postTimelineEntries.push(...mapped);
     }
 
     try {
@@ -277,28 +285,56 @@ export default function LaunchDetail() {
       {/* Countdown and next event moved into header */}
 
       <section aria-labelledby="timeline" className="mb-6">
-        <h3 id="timeline" className="text-lg font-semibold">Timeline</h3>
-        <div className="mt-3 space-y-2">
-          {timelineEntries.map((e) => {
-            const offset = parseOffsetSeconds(e.time ?? null);
-            const epoch = launchEpoch && !Number.isNaN(offset) ? launchEpoch + offset * 1000 : null;
-            
-            return (
-              <div key={e.id} className="flex items-start gap-4">
-                <div className="w-3 flex-shrink-0">
-                  <div className="h-3 w-3 rounded-full bg-[#ff7a00] mt-1" />
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm font-medium">{e.description}</div>
-                  <div className="text-xs text-gray-500 font-mono">{e.time} {epoch ? <span>• {new Date(epoch).toLocaleString()}</span> : null}</div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+        <h3 id="timeline" className="text-lg font-semibold text-center">Timeline</h3>
+        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
+          <div>
+            <h4 className="text-sm font-semibold">Preflight</h4>
+            <div className="mt-2 space-y-2">
+              {preTimelineEntries.map((e) => {
+                const offset = parseOffsetSeconds(e.time ?? null);
+                const epoch = launchEpoch && !Number.isNaN(offset) ? launchEpoch + offset * 1000 : null;
+                const isPassed = epoch !== null && epoch < now.getTime();
+                return (
+                  <div key={e.id} className="flex items-start gap-4">
+                    <div className="w-3 flex-shrink-0">
+                      <div className={isPassed ? "h-3 w-3 rounded-full bg-[#ff7a00] mt-1" : "h-3 w-3 rounded-full border border-slate-600 mt-1 bg-transparent"} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-medium">{e.description}</div>
+                      <div className="text-xs text-gray-500 font-mono">{e.time} {epoch ? <span>• {new Date(epoch).toLocaleString()}</span> : null}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
-      {/* Launch Information section removed per design: details moved into header */}
+          <div>
+            <h4 className="text-sm font-semibold text-right">Postflight</h4>
+            <div className="mt-2 space-y-2">
+              {postTimelineEntries.length > 0 ? postTimelineEntries.map((e) => {
+                const offset = parseOffsetSeconds(e.time ?? null);
+                const epoch = launchEpoch && !Number.isNaN(offset) ? launchEpoch + offset * 1000 : null;
+                const isPassed = epoch !== null && epoch < now.getTime();
+                return (
+                  <div key={e.id} className="flex items-start gap-4 justify-end">
+                    <div className="flex-1 text-right">
+                      <div className="text-sm font-medium">{e.description}</div>
+                      <div className="text-xs text-gray-500 font-mono">{e.time} {epoch ? <span>• {new Date(epoch).toLocaleString()}</span> : null}</div>
+                    </div>
+                    <div className="w-3 flex-shrink-0">
+                      <div className={isPassed ? "h-3 w-3 rounded-full bg-[#ff7a00] mt-1" : "h-3 w-3 rounded-full border border-slate-600 mt-1 bg-transparent"} />
+                    </div>
+                  </div>
+                );
+              }) : (
+                <div className="text-slate-400">No postflight events.</div>
+              )}
+            </div>
+          </div>
+        </div>
+          
+          </section>
     </main>
   );
 }
