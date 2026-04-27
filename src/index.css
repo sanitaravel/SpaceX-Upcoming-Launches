@@ -25,6 +25,23 @@
   caret-color: transparent;
 }
 
+/* Skeleton theme tokens */
+:root {
+  --skeleton-1: rgba(255,255,255,0.06);
+  --skeleton-2: rgba(255,255,255,0.04);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --skeleton-1: rgba(17,24,39,0.06); /* slate-900 tint */
+    --skeleton-2: rgba(17,24,39,0.04);
+  }
+}
+
+/* Utility classes for skeleton blocks */
+.skeleton { background-color: var(--skeleton-1); }
+.skeleton-2 { background-color: var(--skeleton-2); }
+
 /*
   D-DIN is a commercial font. To enable it locally, place webfont files under
   `public/fonts/` named `D-DIN.woff2` and `D-DIN-Bold.woff2` (or update paths
