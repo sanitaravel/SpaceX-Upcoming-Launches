@@ -211,27 +211,39 @@ export default function LaunchDetail() {
     <main className="p-6">
       <header className="mb-6 flex items-start justify-between gap-4">
         <div className="flex-1">
-          <h1 className="text-2xl font-bold">{launch.title}</h1>
-          <div className="mt-2 text-sm text-gray-700">
+          <h1 className="text-2xl font-bold text-slate-100">{launch.title}</h1>
+          <div className="mt-2 text-sm text-slate-300">
             <dl className="space-y-1">
               <div>
-                <dt className="font-medium">Vehicle</dt>
-                <dd>{launch.vehicle ?? "—"}</dd>
+                <dt className="font-medium text-slate-200">Vehicle</dt>
+                <dd className="text-slate-300">{launch.vehicle ?? "—"}</dd>
               </div>
               <div>
-                <dt className="font-medium">Launch Site</dt>
-                <dd>{launch.launchSite ?? "—"}</dd>
+                <dt className="font-medium text-slate-200">Launch Site</dt>
+                <dd className="text-slate-300">{launch.launchSite ?? "—"}</dd>
               </div>
               <div>
-                <dt className="font-medium">Launch Time</dt>
-                <dd>{launchEpoch ? new Date(launchEpoch).toLocaleString() : "—"}</dd>
+                <dt className="font-medium text-slate-200">Launch Time</dt>
+                <dd className="text-slate-300">{launchEpoch ? new Date(launchEpoch).toLocaleString() : "—"}</dd>
               </div>
             </dl>
+            {launch.webcastUrl ? (
+              <div className="mt-2">
+                <a
+                  href={launch.webcastUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-indigo-400 hover:underline"
+                >
+                  Watch Webcast
+                </a>
+              </div>
+            ) : null}
           </div>
         </div>
 
-        <div className="flex-shrink-0 text-right">
-          <div className="text-sm font-semibold text-gray-600">Countdown</div>
+          <div className="flex-shrink-0 text-right">
+          <div className="text-sm font-semibold text-slate-200">Countdown</div>
 
           {launch.tZeroPaused ? (
             <div className="mt-2 inline-flex items-center gap-2 px-2 py-1 bg-[#ff7a00] text-[#242424] rounded-md text-base justify-end">
@@ -249,14 +261,14 @@ export default function LaunchDetail() {
           )}
 
           <div className="mt-4 text-left w-64 ml-auto">
-            <h3 className="text-sm font-semibold">Next Event</h3>
+            <h3 className="text-sm font-semibold text-slate-200">Next Event</h3>
             {nextEvent ? (
               <article className="mt-2 p-3 border rounded-md bg-white/5">
-                <div className="text-sm text-gray-600">{pausedSnapshot?.description ?? nextEvent.entry.description}</div>
-                <div className="mt-2 text-xs font-mono text-gray-500">{pausedSnapshot?.time ?? nextEvent.entry.time} • {launch.tZeroPaused ? (launch.tZeroValue ?? formatCountdown(nextEvent.epoch)) : formatCountdown(nextEvent.epoch)}</div>
+                <div className="text-sm text-slate-300">{pausedSnapshot?.description ?? nextEvent.entry.description}</div>
+                <div className="mt-2 text-xs font-mono text-slate-400">{pausedSnapshot?.time ?? nextEvent.entry.time} • {launch.tZeroPaused ? (launch.tZeroValue ?? formatCountdown(nextEvent.epoch)) : formatCountdown(nextEvent.epoch)}</div>
               </article>
             ) : (
-              <div className="mt-2 text-gray-500">No upcoming timeline events.</div>
+              <div className="mt-2 text-slate-400">No upcoming timeline events.</div>
             )}
           </div>
         </div>
