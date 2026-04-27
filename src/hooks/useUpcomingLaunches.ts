@@ -1,5 +1,9 @@
 import { useEffect, useState, useRef } from "react";
-import type { LaunchTile, LaunchTileWithTimelines, TimelineBlock } from "../types/launch";
+import type {
+  LaunchTile,
+  LaunchTileWithTimelines,
+  TimelineBlock,
+} from "../types/launch";
 
 const API_URL = "/api/spacex/tiles";
 const FUTURE_URL = "/api/spacex/future_missions.json";
@@ -59,15 +63,26 @@ export function useUpcomingLaunches() {
                     s.includes("florida")
                   )
                     return "America/New_York";
-                  if (s.includes("slc-40") || s.includes("cape")) return "America/New_York";
-                  if (s.includes("vandenberg") || s.includes("sbc") || s.includes("santa"))
+                  if (s.includes("slc-40") || s.includes("cape"))
+                    return "America/New_York";
+                  if (
+                    s.includes("vandenberg") ||
+                    s.includes("sbc") ||
+                    s.includes("santa")
+                  )
                     return "America/Los_Angeles";
-                  if (s.includes("vandy") || s.includes("sls") || s.includes("california"))
+                  if (
+                    s.includes("vandy") ||
+                    s.includes("sls") ||
+                    s.includes("california")
+                  )
                     return "America/Los_Angeles";
                   if (s.includes("california")) return "America/Los_Angeles";
                   return "UTC";
                 }
-                const dateObj = futureMap[corr].PrimaryLaunchDate ?? futureMap[corr].TZeroLaunchDate;
+                const dateObj =
+                  futureMap[corr].PrimaryLaunchDate ??
+                  futureMap[corr].TZeroLaunchDate;
                 if (dateObj && dateObj.Seconds) {
                   const secsUtc = Number(dateObj.Seconds);
                   if (!Number.isNaN(secsUtc) && secsUtc > 0) {
@@ -87,7 +102,8 @@ export function useUpcomingLaunches() {
                       hour12: false,
                     });
                     const parts = dtf.formatToParts(new Date(epochMs));
-                    const get = (type: string) => parts.find((p) => p.type === type)!.value;
+                    const get = (type: string) =>
+                      parts.find((p) => p.type === type)!.value;
                     const y = Number(get("year"));
                     const mm = get("month");
                     const day = get("day");
@@ -101,9 +117,15 @@ export function useUpcomingLaunches() {
                 }
                 // If this is a Starlink mission, try to extract group numbers from the link
                 try {
-                  const mType = (item as any).missionType ?? futureMap[corr].missionType;
-                  if (typeof mType === "string" && mType.toLowerCase() === "starlink") {
-                    const linkRaw = String((item as any).link ?? "").toLowerCase();
+                  const mType =
+                    (item as any).missionType ?? futureMap[corr].missionType;
+                  if (
+                    typeof mType === "string" &&
+                    mType.toLowerCase() === "starlink"
+                  ) {
+                    const linkRaw = String(
+                      (item as any).link ?? "",
+                    ).toLowerCase();
                     // look for patterns like '10-56' in 'starlinkg10-56' or 'sl-10-11' etc.
                     const m = linkRaw.match(/(\d+)[-_](\d+)/);
                     if (m && m[1] && m[2]) {
@@ -129,8 +151,14 @@ export function useUpcomingLaunches() {
                       const n = tSeconds;
                       const sign = n >= 0 ? "+" : "-";
                       const abs = Math.abs(n);
-                      const hh = String(Math.floor(abs / 3600)).padStart(2, "0");
-                      const mm = String(Math.floor((abs % 3600) / 60)).padStart(2, "0");
+                      const hh = String(Math.floor(abs / 3600)).padStart(
+                        2,
+                        "0",
+                      );
+                      const mm = String(Math.floor((abs % 3600) / 60)).padStart(
+                        2,
+                        "0",
+                      );
                       const ss = String(abs % 60).padStart(2, "0");
                       display = `T${sign}${hh}:${mm}:${ss}`;
                     } else if (typeof tval === "string") {
@@ -151,8 +179,13 @@ export function useUpcomingLaunches() {
                           tSeconds = Math.floor(n);
                           const sign = tSeconds >= 0 ? "+" : "-";
                           const abs = Math.abs(tSeconds);
-                          const hh = String(Math.floor(abs / 3600)).padStart(2, "0");
-                          const mm = String(Math.floor((abs % 3600) / 60)).padStart(2, "0");
+                          const hh = String(Math.floor(abs / 3600)).padStart(
+                            2,
+                            "0",
+                          );
+                          const mm = String(
+                            Math.floor((abs % 3600) / 60),
+                          ).padStart(2, "0");
                           const ss = String(abs % 60).padStart(2, "0");
                           display = `T${sign}${hh}:${mm}:${ss}`;
                         } else {
@@ -182,8 +215,13 @@ export function useUpcomingLaunches() {
                           second: "2-digit",
                           hour12: false,
                         });
-                        const targetParts = dtfTarget.formatToParts(new Date(targetEpochMs));
-                        const getTarget = (type: string) => targetParts.find((p: Intl.DateTimeFormatPart) => p.type === type)!.value;
+                        const targetParts = dtfTarget.formatToParts(
+                          new Date(targetEpochMs),
+                        );
+                        const getTarget = (type: string) =>
+                          targetParts.find(
+                            (p: Intl.DateTimeFormatPart) => p.type === type,
+                          )!.value;
                         const y2 = Number(getTarget("year"));
                         const mm2 = getTarget("month");
                         const day2 = getTarget("day");
@@ -220,8 +258,8 @@ export function useUpcomingLaunches() {
                 } catch (e) {
                   // ignore decode errors and keep raw
                 }
-                if (raw.includes('/')) {
-                  const parts = raw.split('/').filter(Boolean);
+                if (raw.includes("/")) {
+                  const parts = raw.split("/").filter(Boolean);
                   raw = parts[parts.length - 1];
                 }
                 const missionId = raw;
@@ -230,7 +268,11 @@ export function useUpcomingLaunches() {
                 if (mres.ok) {
                   const mission = await mres.json();
                   const webcasts = mission?.webcasts;
-                  if (Array.isArray(webcasts) && webcasts.length > 0 && webcasts[0]?.videoId) {
+                  if (
+                    Array.isArray(webcasts) &&
+                    webcasts.length > 0 &&
+                    webcasts[0]?.videoId
+                  ) {
                     const vid = webcasts[0].videoId;
                     out.webcastUrl = `https://x.com/SpaceX/status/${vid}`;
                   }
@@ -239,12 +281,22 @@ export function useUpcomingLaunches() {
                   // exposes preLaunchTimeline and postLaunchTimeline objects that
                   // contain a timelineEntries array of events.
                   try {
-                    const pre: TimelineBlock | null = mission?.preLaunchTimeline ?? null;
-                    const post: TimelineBlock | null = mission?.postLaunchTimeline ?? null;
-                    if (pre && pre.timelineEntries && Array.isArray(pre.timelineEntries)) {
+                    const pre: TimelineBlock | null =
+                      mission?.preLaunchTimeline ?? null;
+                    const post: TimelineBlock | null =
+                      mission?.postLaunchTimeline ?? null;
+                    if (
+                      pre &&
+                      pre.timelineEntries &&
+                      Array.isArray(pre.timelineEntries)
+                    ) {
                       out.preLaunchTimeline = pre;
                     }
-                    if (post && post.timelineEntries && Array.isArray(post.timelineEntries)) {
+                    if (
+                      post &&
+                      post.timelineEntries &&
+                      Array.isArray(post.timelineEntries)
+                    ) {
                       out.postLaunchTimeline = post;
                     }
                   } catch (e) {
@@ -257,7 +309,7 @@ export function useUpcomingLaunches() {
             }
 
             return out;
-          })
+          }),
         );
 
         const serialized = JSON.stringify(enriched);

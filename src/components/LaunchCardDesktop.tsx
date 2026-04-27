@@ -104,7 +104,6 @@ export default function LaunchCardDesktop({
     return sign * (hh * 3600 + mmn * 60 + ss);
   }
   
-
   const nextEvent = (() => {
     if (!launchEpoch || allTimeline.length === 0)
       return null as null | { entry: TimelineEntry; epoch: number };
@@ -216,8 +215,6 @@ export default function LaunchCardDesktop({
                   </span>
                 </div>
               </div>
-
-            
             </div>
           ) : null}
 

@@ -111,7 +111,7 @@ export default function LaunchCardMobile({
     }
   }, [launch.tZeroPaused, nextEvent, pausedSnapshot]);
   return (
-  <article className="p-4 border rounded-md relative overflow-visible h-full flex flex-col">
+    <article className="p-4 border rounded-md relative overflow-visible h-full flex flex-col">
       {/* image + mobile-only countdown */}
       {desktopImg || mobileImg ? (
         <div className="overflow-hidden rounded-md">
@@ -198,12 +198,12 @@ export default function LaunchCardMobile({
               </div>
               <div className="text-xs font-mono text-gray-500">At: <span className="text-[#ff7a00]">{pausedSnapshot?.time ?? (nextEvent.entry.time ?? "")}</span></div>
               <div className="text-xs font-mono text-gray-500">In: <span className="text-[#ff7a00]">{launch.tZeroPaused ? (launch.tZeroValue ?? (pausedSnapshot?.time ?? formatEventCountdown(nextEvent.epoch, now.getTime()))) : formatEventCountdown(nextEvent.epoch, now.getTime())}</span></div>
-              
+
             </div>
           ) : null}
         </div>
 
-  {/* absolutely positioned watch button at bottom-right; put it under text visually by using lower z-index */}
+        {/* absolutely positioned watch button at bottom-right; put it under text visually by using lower z-index */}
         <div className="absolute right-4 bottom-4 z-0 flex flex-col items-end">
           {launch.webcastUrl ? (
             <a

@@ -1,6 +1,6 @@
 export default function LaunchCardSkeleton() {
   return (
-    <article className="border rounded-md p-4 h-full shadow-sm animate-pulse" style={{backgroundColor: 'transparent'}}>
+    <article className="border rounded-md p-4 h-full shadow-sm animate-pulse" style={{ backgroundColor: 'transparent' }}>
       {/* Desktop */}
       <div className="hidden md:flex items-center gap-6 h-full">
         <div className="w-56 h-60 rounded-md flex-shrink-0 skeleton" />

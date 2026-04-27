@@ -12,7 +12,7 @@ function App() {
       <div className="min-h-screen flex flex-col w-full">
         <Topbar />
 
-  <main className="flex-1 px-6 py-6">
+        <main className="flex-1 px-6 py-6">
           <Route path="/">
             <LaunchList />
           </Route>
