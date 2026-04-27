@@ -20,7 +20,7 @@ export default function Topbar() {
       aria-label="Top bar"
       className="flex items-center justify-between p-3 sm:p-6 gap-3 w-full"
     >
-        <h1 className="flex-1 min-w-0 text-sm md:text-base lg:text-2xl font-bold">
+      <h1 className="flex-1 min-w-0 text-sm md:text-base lg:text-2xl font-bold">
         <Link
           href="/"
           aria-label="Home — SpaceX Upcoming Launches"

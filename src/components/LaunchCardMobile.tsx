@@ -1,6 +1,8 @@
 import { Clock, Rocket, Play, MapPin, Pause, Flag } from "lucide-react";
 import type { TimelineEntry, LaunchTileWithTimelines } from "../types/launch";
+import { useEffect, useState } from "react";
 import useNow from "../hooks/useNow";
+import { ensureSignedTime, sanitizeDescription, parseOffsetSeconds } from "../utils/launchUtils";
 
 type Props = {
   launch: LaunchTileWithTimelines;
@@ -10,6 +12,7 @@ type Props = {
   userTzLabel: string;
   launchEpoch: number | null;
   countdown: string;
+  missionId?: string;
 };
 
 export default function LaunchCardMobile({
@@ -20,27 +23,10 @@ export default function LaunchCardMobile({
   userTzLabel,
   launchEpoch,
   countdown,
+  missionId
 }: Props) {
   const now = useNow();
   const allTimeline: TimelineEntry[] = [];
-  function ensureSignedTime(t?: string | null, isPre = false) {
-    if (!t) return t ?? null;
-    let s = String(t).trim();
-    // normalize cases like "- 00:53:00" or "T- 00:53:00" -> "-00:53:00" / "T-00:53:00"
-    s = s.replace(/^T([+-])\s+/, "T$1").replace(/^([+-])\s+/, "$1");
-    s = s.replace(/\s+/g, " ").trim();
-    if (/^[Tt][+-]/.test(s) || /^[+-]/.test(s)) return s.replace(/^([Tt]?)([+-])\s*/, "$1$2");
-    if (/^[Tt]\d/.test(s)) return (isPre ? "T-" : "T+") + s.slice(1);
-    return (isPre ? "T-" : "T+") + s;
-  }
-
-  function sanitizeDescription(d?: string | null) {
-    if (!d) return d ?? null;
-    let s = String(d).replace(/\bSpaceX\b/gi, "");
-    s = s.replace(/[\s\u00A0]+/g, " ").trim();
-    s = s.replace(/^[\s:–—-]+/, "");
-    return s || null;
-  }
 
   if (launch.preLaunchTimeline?.timelineEntries) {
     allTimeline.push(...launch.preLaunchTimeline.timelineEntries.map((e) => ({ ...e, time: ensureSignedTime(e.time, true), description: sanitizeDescription(e.description) })));
@@ -56,28 +42,7 @@ export default function LaunchCardMobile({
     allTimeline.push(...launch.postLaunchTimeline.timelineEntries.map((e) => ({ ...e, time: ensureSignedTime(e.time, false), description: sanitizeDescription(e.description) })));
   }
 
-  function parseOffsetSeconds(timeStr?: string | null) {
-    if (!timeStr) return NaN;
-    const s = String(timeStr).trim();
-    // Accept formats like T-00:01:12, -00:01:12, +00:01:12, 00:01:12
-    const m = s.match(/^T?([+-])?(\d{1,2}:)?(\d{1,2}):(\d{2})$/);
-    if (!m) return NaN;
-    const sign = m[1] === "-" ? -1 : 1;
-    const parts = s.replace(/^T/, "").replace(/^\+/, "").replace(/^\-/, "").split(":");
-    let hh = 0;
-    let mmn = 0;
-    let ss = 0;
-    if (parts.length === 3) {
-      hh = Number(parts[0]);
-      mmn = Number(parts[1]);
-      ss = Number(parts[2]);
-    } else if (parts.length === 2) {
-      mmn = Number(parts[0]);
-      ss = Number(parts[1]);
-    }
-    if ([hh, mmn, ss].some((n) => Number.isNaN(n))) return NaN;
-    return sign * (hh * 3600 + mmn * 60 + ss);
-  }
+  // helpers imported from ../utils/launchUtils
 
   const nextEvent = (() => {
     if (!launchEpoch || allTimeline.length === 0) return null as null | { entry: TimelineEntry; epoch: number };
@@ -96,8 +61,19 @@ export default function LaunchCardMobile({
     }
     return null;
   })();
+  const [pausedSnapshot, setPausedSnapshot] = useState<null | { description?: string | null; time?: string | null }>(null);
+
+  useEffect(() => {
+    if (launch.tZeroPaused) {
+      if (nextEvent && !pausedSnapshot) {
+        setPausedSnapshot({ description: nextEvent.entry.description, time: nextEvent.entry.time });
+      }
+    } else {
+      if (pausedSnapshot) setPausedSnapshot(null);
+    }
+  }, [launch.tZeroPaused, nextEvent, pausedSnapshot]);
   return (
-  <article className="p-4 border rounded-md relative overflow-visible h-full flex flex-col">
+    <article className="p-4 border rounded-md relative overflow-visible h-full flex flex-col">
       {/* image + mobile-only countdown */}
       {desktopImg || mobileImg ? (
         <div className="overflow-hidden rounded-md">
@@ -113,7 +89,7 @@ export default function LaunchCardMobile({
           </picture>
 
           {launch.tZeroPaused ? (
-            <div className="mt-2 inline-flex items-center gap-2 px-2 py-1 bg-[#ff7a00] text-[#242424] rounded-md text-base">
+            <div className="mt-2 inline-flex w-auto max-w-max items-center gap-2 px-2 py-1 bg-[#ff7a00] text-[#242424] rounded-md text-base">
               <Pause size={14} aria-hidden="false" aria-label="T-Zero paused" />
               <span className="sr-only">T‑Zero Paused</span>
               {launch.tZeroValue ? <span className="font-mono text-base">{launch.tZeroValue}</span> : null}
@@ -141,7 +117,13 @@ export default function LaunchCardMobile({
 
       <div className="mt-1 flex-1">
         <div className="relative z-10 overflow-visible h-full flex flex-col">
-          <h2 className="text-lg font-semibold">{launch.title}</h2>
+          <h2 className="text-lg font-semibold">
+            {missionId ? (
+              <a href={`/launch/${encodeURIComponent(missionId)}`} className="hover:underline text-inherit">{launch.title}</a>
+            ) : (
+              launch.title
+            )}
+          </h2>
 
           <div className="text-sm text-gray-500 flex items-center gap-2 mt-1">
             <Clock size={14} />
@@ -165,7 +147,7 @@ export default function LaunchCardMobile({
               <div className="text-xs text-gray-500 flex items-center gap-2"><Flag size={16} /> Next event: </div>
               <div
                 className="text-sm font-medium mb-1"
-                title={nextEvent.entry.description ?? ""}
+                title={(pausedSnapshot?.description ?? nextEvent.entry.description) ?? ""}
                 style={{
                   maxWidth: "36ch",
                   display: "-webkit-box",
@@ -174,15 +156,16 @@ export default function LaunchCardMobile({
                   overflow: "hidden",
                 }}
               >
-                {nextEvent.entry.description}
+                {pausedSnapshot?.description ?? nextEvent.entry.description}
               </div>
-              <div className="text-xs font-mono text-gray-500">At: <span className="text-[#ff7a00]">{nextEvent.entry.time ?? ""}</span></div>
-              <div className="text-xs font-mono text-gray-500">In: <span className="text-[#ff7a00]">{formatEventCountdown(nextEvent.epoch, now.getTime())}</span></div>
+              <div className="text-xs font-mono text-gray-500">At: <span className="text-[#ff7a00]">{pausedSnapshot?.time ?? (nextEvent.entry.time ?? "")}</span></div>
+              <div className="text-xs font-mono text-gray-500">In: <span className="text-[#ff7a00]">{launch.tZeroPaused ? (launch.tZeroValue ?? (pausedSnapshot?.time ?? formatEventCountdown(nextEvent.epoch, now.getTime()))) : formatEventCountdown(nextEvent.epoch, now.getTime())}</span></div>
+
             </div>
           ) : null}
         </div>
 
-  {/* absolutely positioned watch button at bottom-right; put it under text visually by using lower z-index */}
+        {/* absolutely positioned watch button at bottom-right; put it under text visually by using lower z-index */}
         <div className="absolute right-4 bottom-4 z-0 flex flex-col items-end">
           {launch.webcastUrl ? (
             <a

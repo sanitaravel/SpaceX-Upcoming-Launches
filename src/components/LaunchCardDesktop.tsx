@@ -1,6 +1,8 @@
 import { Clock, Rocket, Play, MapPin, Pause, Flag } from "lucide-react";
 import type { TimelineEntry, LaunchTileWithTimelines } from "../types/launch";
+import { useEffect, useState } from "react";
 import useNow from "../hooks/useNow";
+import { ensureSignedTime, sanitizeDescription, parseOffsetSeconds } from "../utils/launchUtils";
 
 type Props = {
   launch: LaunchTileWithTimelines;
@@ -10,6 +12,7 @@ type Props = {
   userTzLabel: string;
   launchEpoch: number | null;
   countdown: string;
+  missionId?: string;
 };
 
 export default function LaunchCardDesktop({
@@ -20,33 +23,11 @@ export default function LaunchCardDesktop({
   userTzLabel,
   launchEpoch,
   countdown,
+  missionId,
 }: Props) {
   // compute next upcoming timeline event (relative to launchEpoch)
   const now = useNow();
   const allTimeline: TimelineEntry[] = [];
-  function ensureSignedTime(t?: string | null, isPre = false) {
-    if (!t) return t ?? null;
-    let s = String(t).trim();
-    // normalize cases like "- 00:53:00" or "T- 00:53:00" -> "-00:53:00" / "T-00:53:00"
-    s = s.replace(/^T([+-])\s+/, "T$1").replace(/^([+-])\s+/, "$1");
-    s = s.replace(/\s+/g, " ").trim();
-    // If already has explicit sign (T+ / T- / + / -), keep as-is but remove stray space
-    if (/^[Tt][+-]/.test(s) || /^[+-]/.test(s)) return s.replace(/^([Tt]?)([+-])\s*/, "$1$2");
-    // If starts with 'T' but no sign (e.g. 'T00:01:12'), add sign
-    if (/^[Tt]\d/.test(s)) return (isPre ? "T-" : "T+") + s.slice(1);
-    // Otherwise prefix with explicit T- or T+
-    return (isPre ? "T-" : "T+") + s;
-  }
-
-  function sanitizeDescription(d?: string | null) {
-    if (!d) return d ?? null;
-    // remove the standalone word "SpaceX" (case-insensitive), collapse spaces, trim
-    let s = String(d).replace(/\bSpaceX\b/gi, "");
-    s = s.replace(/[\s\u00A0]+/g, " ").trim();
-    // remove leading punctuation leftover like ':' or '-'
-    s = s.replace(/^[\s:–—-]+/, "");
-    return s || null;
-  }
 
   if (launch.preLaunchTimeline?.timelineEntries) {
     allTimeline.push(
@@ -73,35 +54,8 @@ export default function LaunchCardDesktop({
       }))
     );
   }
-  function parseOffsetSeconds(timeStr?: string | null) {
-    if (!timeStr) return NaN;
-    const s = String(timeStr).trim();
-    // Accept formats like T-00:01:12, -00:01:12, +00:01:12, 00:01:12
-    const m = s.match(/^T?([+-])?(\d{1,2}:)?(\d{1,2}):(\d{2})$/);
-    if (!m) return NaN;
-    const sign = m[1] === "-" ? -1 : 1;
-    // m[2] may be like '01:' so better to split by ':'
-    const parts = s
-      .replace(/^T/, "")
-      .replace(/^\+/, "")
-      .replace(/^\-/, "")
-      .split(":");
-    let hh = 0;
-    let mmn = 0;
-    let ss = 0;
-    if (parts.length === 3) {
-      hh = Number(parts[0]);
-      mmn = Number(parts[1]);
-      ss = Number(parts[2]);
-    } else if (parts.length === 2) {
-      mmn = Number(parts[0]);
-      ss = Number(parts[1]);
-    }
-    if ([hh, mmn, ss].some((n) => Number.isNaN(n))) return NaN;
-    return sign * (hh * 3600 + mmn * 60 + ss);
-  }
+  // helpers imported from ../utils/launchUtils
   
-
   const nextEvent = (() => {
     if (!launchEpoch || allTimeline.length === 0)
       return null as null | { entry: TimelineEntry; epoch: number };
@@ -121,6 +75,17 @@ export default function LaunchCardDesktop({
     }
     return null;
   })();
+  const [pausedSnapshot, setPausedSnapshot] = useState<null | { description?: string | null; time?: string | null }>(null);
+
+  useEffect(() => {
+    if (launch.tZeroPaused) {
+      if (nextEvent && !pausedSnapshot) {
+        setPausedSnapshot({ description: nextEvent.entry.description, time: nextEvent.entry.time });
+      }
+    } else {
+      if (pausedSnapshot) setPausedSnapshot(null);
+    }
+  }, [launch.tZeroPaused, nextEvent, pausedSnapshot]);
   return (
     <article className="hidden md:flex p-5 border rounded-md items-center justify-between h-full">
       <div className="flex items-center gap-6 flex-1">
@@ -142,7 +107,13 @@ export default function LaunchCardDesktop({
         )}
 
         <div className="text-left flex flex-col">
-          <h2 className="text-xl font-semibold">{launch.title}</h2>
+          <h2 className="text-xl font-semibold">
+            {missionId ? (
+              <a href={`/launch/${encodeURIComponent(missionId)}`} className="hover:underline text-inherit">{launch.title}</a>
+            ) : (
+              launch.title
+            )}
+          </h2>
 
           <div className="text-base text-gray-500 flex items-center gap-2 mt-1">
             <Clock size={16} />
@@ -173,7 +144,7 @@ export default function LaunchCardDesktop({
                 <div className="text-gray-500 flex items-center gap-2"><Flag size={16} /> Next event: </div>
                 <div
                   className="text-sm font-medium"
-                  title={nextEvent.entry.description ?? ""}
+                  title={(pausedSnapshot?.description ?? nextEvent.entry.description) ?? ""}
                   style={{
                     display: "-webkit-box",
                     WebkitLineClamp: 2 as any,
@@ -181,7 +152,7 @@ export default function LaunchCardDesktop({
                     overflow: "hidden",
                   }}
                 >
-                  {nextEvent.entry.description}
+                  {pausedSnapshot?.description ?? nextEvent.entry.description}
                 </div>
                 <div className="text-xs font-mono text-gray-500 mt-1">
                   At:{" "}
@@ -190,19 +161,17 @@ export default function LaunchCardDesktop({
                   </span>
                 </div>
                 <div className="text-xs font-mono text-gray-500 mt-1">
-                  In:{" "}
+                  In: {" "}
                   <span className="text-[#ff7a00]">
-                    {formatEventCountdown(nextEvent.epoch, now.getTime())}
+                    {launch.tZeroPaused ? (launch.tZeroValue ?? (pausedSnapshot?.time ?? formatEventCountdown(nextEvent.epoch, now.getTime()))) : formatEventCountdown(nextEvent.epoch, now.getTime())}
                   </span>
                 </div>
               </div>
-
-            
             </div>
           ) : null}
 
           {launch.tZeroPaused ? (
-            <div className="mt-2 inline-flex items-center gap-2 px-2 py-1 bg-[#ff7a00] text-[#242424] rounded-md text-base">
+            <div className="mt-2 inline-flex w-auto max-w-max items-center gap-2 px-2 py-1 bg-[#ff7a00] text-[#242424] rounded-md text-base">
               <Pause size={16} aria-hidden="false" aria-label="T-Zero paused" />
               <span className="sr-only">T‑Zero Paused</span>
               {launch.tZeroValue ? (
