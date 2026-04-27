@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 
 # Sitemap location (production)
-Sitemap: https://space-x-upcoming-launches.vercel.app/sitemap.xml
+Sitemap: https://space-x-upcoming-launches.alexanderkoshcheev.me/sitemap.xml
