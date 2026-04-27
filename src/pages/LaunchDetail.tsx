@@ -1,9 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useRoute } from "wouter";
 import { useUpcomingLaunches } from "../hooks/useUpcomingLaunches";
 import useNow from "../hooks/useNow";
-import type { LaunchTileWithTimelines, TimelineEntry } from "../types/launch";
-import { Play } from "lucide-react";
+import type { TimelineEntry } from "../types/launch";
+import { Pause, Clock } from "lucide-react";
 
 function ensureSignedTime(t?: string | null, isPre = false) {
   if (!t) return t ?? null;
@@ -45,6 +45,64 @@ function parseOffsetSeconds(timeStr?: string | null) {
   return sign * (hh * 3600 + mmn * 60 + ss);
 }
 
+function guessTimeZone(site?: string) {
+  if (!site) return "UTC";
+  const s = site.toLowerCase();
+  if (s.includes("starbase")) return "America/Chicago";
+  if (
+    s.includes("lc-39a") ||
+    s.includes("launch complex 39") ||
+    s.includes("kennedy") ||
+    s.includes("florida")
+  )
+    return "America/New_York";
+  if (s.includes("slc-40") || s.includes("cape")) return "America/New_York";
+  if (s.includes("vandenberg") || s.includes("sbc") || s.includes("santa"))
+    return "America/Los_Angeles";
+  if (s.includes("vandy") || s.includes("sls") || s.includes("california"))
+    return "America/Los_Angeles";
+  if (s.includes("california")) return "America/Los_Angeles";
+  return "UTC";
+}
+
+// Given wall-clock components and an IANA timeZone, compute epoch ms for that wall time.
+function epochFromWallTime(
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  minute: number,
+  second: number,
+  timeZone: string
+) {
+  let guess = Date.UTC(year, month - 1, day, hour, minute, second);
+  for (let i = 0; i < 3; i++) {
+    const d = new Date(guess);
+    const dtf = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+    const parts = dtf.formatToParts(d);
+    const get = (type: string) => parts.find((p) => p.type === type)!.value;
+    const y = Number(get("year"));
+    const m = Number(get("month"));
+    const dayp = Number(get("day"));
+    const h = Number(get("hour"));
+    const min = Number(get("minute"));
+    const sec = Number(get("second"));
+    const asUTC = Date.UTC(y, m - 1, dayp, h, min, sec);
+    const offset = asUTC - d.getTime();
+    guess = Date.UTC(year, month - 1, day, hour, minute, second) - offset;
+  }
+  return guess;
+}
+
 function missionIdFromLink(link?: string, fallback?: string) {
   if (!link) return fallback ?? "";
   try {
@@ -71,41 +129,43 @@ export default function LaunchDetail() {
     return data.find((l) => missionIdFromLink(l.link, String(l.id)) === id || String(l.id) === id) ?? null;
   }, [data, id]);
 
-  if (loading) return <main className="p-6">Loading...</main>;
-  if (error) return <main className="p-6 text-red-600">Error: {error}</main>;
-  if (!launch) return <main className="p-6">Launch not found.</main>;
+  const [pausedSnapshot, setPausedSnapshot] = useState<null | { description?: string | null; time?: string | null }>(null);
 
-  // build timeline
+  // build timeline (safe to run even if `launch` is null)
   const timeline: { entry: TimelineEntry; epoch: number }[] = [];
   const timelineEntries: TimelineEntry[] = [];
-  if (launch.preLaunchTimeline?.timelineEntries) {
-    timelineEntries.push(...launch.preLaunchTimeline.timelineEntries.map((e) => ({ ...e, time: ensureSignedTime(e.time, true), description: sanitizeDescription(e.description) })));
-  } else {
-    timelineEntries.push({ id: -1, time: "T-00:00:00", description: "Liftoff" });
-  }
-  if (launch.postLaunchTimeline?.timelineEntries) {
-    timelineEntries.push(...launch.postLaunchTimeline.timelineEntries.map((e) => ({ ...e, time: ensureSignedTime(e.time, false), description: sanitizeDescription(e.description) })));
-  }
-
-  // compute launch epoch if possible from launch.launchDate/launch.launchTime using UTC fallback
   let launchEpoch: number | null = null;
-  try {
-    if (launch.launchTime) {
-      const [hh, mm, ss] = launch.launchTime.split(":").map((n) => Number(n));
-      const [y, m, d] = launch.launchDate.split("-").map((n) => Number(n));
-      launchEpoch = Date.UTC(y, m - 1, d, hh ?? 0, mm ?? 0, ss ?? 0);
+  if (launch) {
+    if (launch.preLaunchTimeline?.timelineEntries) {
+      timelineEntries.push(...launch.preLaunchTimeline.timelineEntries.map((e) => ({ ...e, time: ensureSignedTime(e.time, true), description: sanitizeDescription(e.description) })));
     } else {
-      launchEpoch = new Date(launch.launchDate).getTime();
+      timelineEntries.push({ id: -1, time: "T-00:00:00", description: "Liftoff" });
     }
-  } catch (e) {
-    launchEpoch = null;
-  }
+    if (launch.postLaunchTimeline?.timelineEntries) {
+      timelineEntries.push(...launch.postLaunchTimeline.timelineEntries.map((e) => ({ ...e, time: ensureSignedTime(e.time, false), description: sanitizeDescription(e.description) })));
+    }
 
-  if (launchEpoch) {
-    for (const e of timelineEntries) {
-      const offset = parseOffsetSeconds(e.time ?? null);
-      if (Number.isNaN(offset)) continue;
-      timeline.push({ entry: e, epoch: launchEpoch + offset * 1000 });
+    try {
+      if ((launch as any)._epochMs && typeof (launch as any)._epochMs === "number") {
+        launchEpoch = (launch as any)._epochMs as number;
+      } else if (launch.launchTime) {
+        const [hh, mm, ss] = launch.launchTime.split(":").map((n) => Number(n));
+        const [y, m, d] = launch.launchDate.split("-").map((n) => Number(n));
+        const tz = guessTimeZone(launch.launchSite);
+        launchEpoch = epochFromWallTime(y, m, d, hh ?? 0, mm ?? 0, ss ?? 0, tz);
+      } else {
+        launchEpoch = new Date(launch.launchDate).getTime();
+      }
+    } catch (e) {
+      launchEpoch = null;
+    }
+
+    if (launchEpoch) {
+      for (const e of timelineEntries) {
+        const offset = parseOffsetSeconds(e.time ?? null);
+        if (Number.isNaN(offset)) continue;
+        timeline.push({ entry: e, epoch: launchEpoch + offset * 1000 });
+      }
     }
   }
 
@@ -116,6 +176,22 @@ export default function LaunchDetail() {
     future.sort((a, b) => a.epoch - b.epoch);
     return future[0];
   })();
+
+  useEffect(() => {
+    if (launch?.tZeroPaused) {
+      if (nextEvent && !pausedSnapshot) {
+        setPausedSnapshot({ description: nextEvent.entry.description, time: nextEvent.entry.time });
+      }
+    } else {
+      if (pausedSnapshot) setPausedSnapshot(null);
+    }
+  }, [launch?.tZeroPaused, nextEvent, pausedSnapshot]);
+
+  if (loading) return <main className="p-6">Loading...</main>;
+  if (error) return <main className="p-6 text-red-600">Error: {error}</main>;
+  if (!launch) return <main className="p-6">Launch not found.</main>;
+
+  
 
   function formatCountdown(targetMs: number | null) {
     if (!targetMs) return "";
@@ -133,29 +209,60 @@ export default function LaunchDetail() {
 
   return (
     <main className="p-6">
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold">{launch.title}</h1>
-        <p className="text-sm text-gray-500 mt-1">Mission ID: {missionIdFromLink(launch.link, String(launch.id))}</p>
+      <header className="mb-6 flex items-start justify-between gap-4">
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold">{launch.title}</h1>
+          <div className="mt-2 text-sm text-gray-700">
+            <dl className="space-y-1">
+              <div>
+                <dt className="font-medium">Vehicle</dt>
+                <dd>{launch.vehicle ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="font-medium">Launch Site</dt>
+                <dd>{launch.launchSite ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="font-medium">Launch Time</dt>
+                <dd>{launchEpoch ? new Date(launchEpoch).toLocaleString() : "—"}</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+
+        <div className="flex-shrink-0 text-right">
+          <div className="text-sm font-semibold text-gray-600">Countdown</div>
+
+          {launch.tZeroPaused ? (
+            <div className="mt-2 inline-flex items-center gap-2 px-2 py-1 bg-[#ff7a00] text-[#242424] rounded-md text-base justify-end">
+              <Pause size={16} aria-hidden="false" aria-label="T-Zero paused" />
+              <span className="sr-only">T‑Zero Paused</span>
+              {launch.tZeroValue ? <span className="font-mono">{launch.tZeroValue}</span> : null}
+            </div>
+          ) : launchEpoch ? (
+            <div className="mt-2 text-xl font-mono text-[#ff7a00] flex items-center justify-end gap-2">
+              <Clock size={18} />
+              <span>{formatCountdown(launchEpoch)}</span>
+            </div>
+          ) : (
+            <div className="mt-2 text-xl font-mono text-[#ff7a00]">Date unknown</div>
+          )}
+
+          <div className="mt-4 text-left w-64 ml-auto">
+            <h3 className="text-sm font-semibold">Next Event</h3>
+            {nextEvent ? (
+              <article className="mt-2 p-3 border rounded-md bg-white/5">
+                <div className="text-sm text-gray-600">{pausedSnapshot?.description ?? nextEvent.entry.description}</div>
+                <div className="mt-2 text-xs font-mono text-gray-500">{pausedSnapshot?.time ?? nextEvent.entry.time} • {launch.tZeroPaused ? (launch.tZeroValue ?? formatCountdown(nextEvent.epoch)) : formatCountdown(nextEvent.epoch)}</div>
+              </article>
+            ) : (
+              <div className="mt-2 text-gray-500">No upcoming timeline events.</div>
+            )}
+          </div>
+        </div>
       </header>
 
-      <section aria-labelledby="countdown" className="mb-6">
-        <h2 id="countdown" className="text-lg font-semibold">Countdown</h2>
-        <div className="mt-2 text-xl font-mono text-[#ff7a00]">
-          {launchEpoch ? formatCountdown(launchEpoch) : "Date unknown"}
-        </div>
-      </section>
-
-      <section aria-labelledby="next-event" className="mb-6">
-        <h3 id="next-event" className="text-lg font-semibold">Next Event</h3>
-        {nextEvent ? (
-          <article className="mt-2 p-4 border rounded-md">
-            <div className="text-sm text-gray-600">{nextEvent.entry.description}</div>
-            <div className="mt-2 text-xs font-mono text-gray-500">{nextEvent.entry.time} • {formatCountdown(nextEvent.epoch)}</div>
-          </article>
-        ) : (
-          <div className="mt-2 text-gray-500">No upcoming timeline events.</div>
-        )}
-      </section>
+      {/* Countdown and next event moved into header */}
 
       <section aria-labelledby="timeline" className="mb-6">
         <h3 id="timeline" className="text-lg font-semibold">Timeline</h3>
@@ -163,7 +270,7 @@ export default function LaunchDetail() {
           {timelineEntries.map((e) => {
             const offset = parseOffsetSeconds(e.time ?? null);
             const epoch = launchEpoch && !Number.isNaN(offset) ? launchEpoch + offset * 1000 : null;
-            const pct = epoch && launchEpoch ? Math.max(0, Math.min(100, Math.round(((epoch - launchEpoch) / (24 * 3600 * 1000)) * 100))) : 0;
+            
             return (
               <div key={e.id} className="flex items-start gap-4">
                 <div className="w-3 flex-shrink-0">
@@ -179,35 +286,7 @@ export default function LaunchDetail() {
         </div>
       </section>
 
-      <section aria-labelledby="info" className="mb-6">
-        <h3 id="info" className="text-lg font-semibold">Launch Information</h3>
-        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 text-sm text-gray-700">
-          <div>
-            <dt className="font-medium">Vehicle</dt>
-            <dd>{launch.vehicle ?? "—"}</dd>
-          </div>
-          <div>
-            <dt className="font-medium">Launch Site</dt>
-            <dd>{launch.launchSite ?? "—"}</dd>
-          </div>
-          <div>
-            <dt className="font-medium">Local Date</dt>
-            <dd>{launch.launchDate ?? "—"}</dd>
-          </div>
-          <div>
-            <dt className="font-medium">Local Time</dt>
-            <dd>{launch.launchTime ?? "—"}</dd>
-          </div>
-        </dl>
-
-        {launch.webcastUrl ? (
-          <div className="mt-4">
-            <a href={launch.webcastUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 bg-[#ff7a00] rounded-md text-sm font-semibold" style={{ color: "#242424" }}>
-              <Play size={16} /> Watch Webcast
-            </a>
-          </div>
-        ) : null}
-      </section>
+      {/* Launch Information section removed per design: details moved into header */}
     </main>
   );
 }

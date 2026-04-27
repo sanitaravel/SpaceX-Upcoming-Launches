@@ -1,5 +1,6 @@
 import { Clock, Rocket, Play, MapPin, Pause, Flag } from "lucide-react";
 import type { TimelineEntry, LaunchTileWithTimelines } from "../types/launch";
+import { useEffect, useState } from "react";
 import useNow from "../hooks/useNow";
 
 type Props = {
@@ -98,6 +99,17 @@ export default function LaunchCardMobile({
     }
     return null;
   })();
+  const [pausedSnapshot, setPausedSnapshot] = useState<null | { description?: string | null; time?: string | null }>(null);
+
+  useEffect(() => {
+    if (launch.tZeroPaused) {
+      if (nextEvent && !pausedSnapshot) {
+        setPausedSnapshot({ description: nextEvent.entry.description, time: nextEvent.entry.time });
+      }
+    } else {
+      if (pausedSnapshot) setPausedSnapshot(null);
+    }
+  }, [launch.tZeroPaused, nextEvent, pausedSnapshot]);
   return (
   <article className="p-4 border rounded-md relative overflow-visible h-full flex flex-col">
       {/* image + mobile-only countdown */}
@@ -115,7 +127,7 @@ export default function LaunchCardMobile({
           </picture>
 
           {launch.tZeroPaused ? (
-            <div className="mt-2 inline-flex items-center gap-2 px-2 py-1 bg-[#ff7a00] text-[#242424] rounded-md text-base">
+            <div className="mt-2 inline-flex w-auto max-w-max items-center gap-2 px-2 py-1 bg-[#ff7a00] text-[#242424] rounded-md text-base">
               <Pause size={14} aria-hidden="false" aria-label="T-Zero paused" />
               <span className="sr-only">T‑Zero Paused</span>
               {launch.tZeroValue ? <span className="font-mono text-base">{launch.tZeroValue}</span> : null}
@@ -173,7 +185,7 @@ export default function LaunchCardMobile({
               <div className="text-xs text-gray-500 flex items-center gap-2"><Flag size={16} /> Next event: </div>
               <div
                 className="text-sm font-medium mb-1"
-                title={nextEvent.entry.description ?? ""}
+                title={(pausedSnapshot?.description ?? nextEvent.entry.description) ?? ""}
                 style={{
                   maxWidth: "36ch",
                   display: "-webkit-box",
@@ -182,10 +194,11 @@ export default function LaunchCardMobile({
                   overflow: "hidden",
                 }}
               >
-                {nextEvent.entry.description}
+                {pausedSnapshot?.description ?? nextEvent.entry.description}
               </div>
-              <div className="text-xs font-mono text-gray-500">At: <span className="text-[#ff7a00]">{nextEvent.entry.time ?? ""}</span></div>
-              <div className="text-xs font-mono text-gray-500">In: <span className="text-[#ff7a00]">{formatEventCountdown(nextEvent.epoch, now.getTime())}</span></div>
+              <div className="text-xs font-mono text-gray-500">At: <span className="text-[#ff7a00]">{pausedSnapshot?.time ?? (nextEvent.entry.time ?? "")}</span></div>
+              <div className="text-xs font-mono text-gray-500">In: <span className="text-[#ff7a00]">{launch.tZeroPaused ? (launch.tZeroValue ?? (pausedSnapshot?.time ?? formatEventCountdown(nextEvent.epoch, now.getTime()))) : formatEventCountdown(nextEvent.epoch, now.getTime())}</span></div>
+              
             </div>
           ) : null}
         </div>

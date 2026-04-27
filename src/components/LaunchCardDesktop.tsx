@@ -1,5 +1,6 @@
 import { Clock, Rocket, Play, MapPin, Pause, Flag } from "lucide-react";
 import type { TimelineEntry, LaunchTileWithTimelines } from "../types/launch";
+import { useEffect, useState } from "react";
 import useNow from "../hooks/useNow";
 
 type Props = {
@@ -123,6 +124,17 @@ export default function LaunchCardDesktop({
     }
     return null;
   })();
+  const [pausedSnapshot, setPausedSnapshot] = useState<null | { description?: string | null; time?: string | null }>(null);
+
+  useEffect(() => {
+    if (launch.tZeroPaused) {
+      if (nextEvent && !pausedSnapshot) {
+        setPausedSnapshot({ description: nextEvent.entry.description, time: nextEvent.entry.time });
+      }
+    } else {
+      if (pausedSnapshot) setPausedSnapshot(null);
+    }
+  }, [launch.tZeroPaused, nextEvent, pausedSnapshot]);
   return (
     <article className="hidden md:flex p-5 border rounded-md items-center justify-between h-full">
       <div className="flex items-center gap-6 flex-1">
@@ -181,7 +193,7 @@ export default function LaunchCardDesktop({
                 <div className="text-gray-500 flex items-center gap-2"><Flag size={16} /> Next event: </div>
                 <div
                   className="text-sm font-medium"
-                  title={nextEvent.entry.description ?? ""}
+                  title={(pausedSnapshot?.description ?? nextEvent.entry.description) ?? ""}
                   style={{
                     display: "-webkit-box",
                     WebkitLineClamp: 2 as any,
@@ -189,7 +201,7 @@ export default function LaunchCardDesktop({
                     overflow: "hidden",
                   }}
                 >
-                  {nextEvent.entry.description}
+                  {pausedSnapshot?.description ?? nextEvent.entry.description}
                 </div>
                 <div className="text-xs font-mono text-gray-500 mt-1">
                   At:{" "}
@@ -198,9 +210,9 @@ export default function LaunchCardDesktop({
                   </span>
                 </div>
                 <div className="text-xs font-mono text-gray-500 mt-1">
-                  In:{" "}
+                  In: {" "}
                   <span className="text-[#ff7a00]">
-                    {formatEventCountdown(nextEvent.epoch, now.getTime())}
+                    {launch.tZeroPaused ? (launch.tZeroValue ?? (pausedSnapshot?.time ?? formatEventCountdown(nextEvent.epoch, now.getTime()))) : formatEventCountdown(nextEvent.epoch, now.getTime())}
                   </span>
                 </div>
               </div>
@@ -210,7 +222,7 @@ export default function LaunchCardDesktop({
           ) : null}
 
           {launch.tZeroPaused ? (
-            <div className="mt-2 inline-flex items-center gap-2 px-2 py-1 bg-[#ff7a00] text-[#242424] rounded-md text-base">
+            <div className="mt-2 inline-flex w-auto max-w-max items-center gap-2 px-2 py-1 bg-[#ff7a00] text-[#242424] rounded-md text-base">
               <Pause size={16} aria-hidden="false" aria-label="T-Zero paused" />
               <span className="sr-only">T‑Zero Paused</span>
               {launch.tZeroValue ? (
