@@ -26,9 +26,12 @@ export default function LaunchCardDesktop({
   const allTimeline: TimelineEntry[] = [];
   function ensureSignedTime(t?: string | null, isPre = false) {
     if (!t) return t ?? null;
-    const s = String(t).trim();
-    // If already has explicit sign (T+ / T- / + / -), keep as-is
-    if (/^[Tt][+-]/.test(s) || /^[+-]/.test(s)) return s;
+    let s = String(t).trim();
+    // normalize cases like "- 00:53:00" or "T- 00:53:00" -> "-00:53:00" / "T-00:53:00"
+    s = s.replace(/^T([+-])\s+/, "T$1").replace(/^([+-])\s+/, "$1");
+    s = s.replace(/\s+/g, " ").trim();
+    // If already has explicit sign (T+ / T- / + / -), keep as-is but remove stray space
+    if (/^[Tt][+-]/.test(s) || /^[+-]/.test(s)) return s.replace(/^([Tt]?)([+-])\s*/, "$1$2");
     // If starts with 'T' but no sign (e.g. 'T00:01:12'), add sign
     if (/^[Tt]\d/.test(s)) return (isPre ? "T-" : "T+") + s.slice(1);
     // Otherwise prefix with explicit T- or T+

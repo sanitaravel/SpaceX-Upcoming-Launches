@@ -25,8 +25,11 @@ export default function LaunchCardMobile({
   const allTimeline: TimelineEntry[] = [];
   function ensureSignedTime(t?: string | null, isPre = false) {
     if (!t) return t ?? null;
-    const s = String(t).trim();
-    if (/^[Tt][+-]/.test(s) || /^[+-]/.test(s)) return s;
+    let s = String(t).trim();
+    // normalize cases like "- 00:53:00" or "T- 00:53:00" -> "-00:53:00" / "T-00:53:00"
+    s = s.replace(/^T([+-])\s+/, "T$1").replace(/^([+-])\s+/, "$1");
+    s = s.replace(/\s+/g, " ").trim();
+    if (/^[Tt][+-]/.test(s) || /^[+-]/.test(s)) return s.replace(/^([Tt]?)([+-])\s*/, "$1$2");
     if (/^[Tt]\d/.test(s)) return (isPre ? "T-" : "T+") + s.slice(1);
     return (isPre ? "T-" : "T+") + s;
   }
