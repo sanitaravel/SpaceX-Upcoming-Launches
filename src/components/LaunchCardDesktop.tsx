@@ -90,7 +90,7 @@ export default function LaunchCardDesktop({
     <article className="hidden md:flex p-5 border rounded-md items-center justify-between h-full">
       <div className="flex items-center gap-6 flex-1">
         {desktopImg || mobileImg ? (
-          <picture className="w-56 h-60 flex-shrink-0 overflow-hidden rounded-md">
+          <picture className="w-56 h-60 shrink-0 overflow-hidden rounded-md">
             {desktopImg ? (
               <source media="(min-width:768px)" srcSet={desktopImg} />
             ) : null}
@@ -195,7 +195,7 @@ export default function LaunchCardDesktop({
         </div>
       </div>
 
-      <div className="ml-6 flex-shrink-0 flex flex-col items-center">
+      <div className="ml-6 shrink-0 flex flex-col items-center">
         {launch.webcastUrl ? (
           <a
             href={launch.webcastUrl}
