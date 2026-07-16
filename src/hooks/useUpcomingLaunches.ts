@@ -247,7 +247,7 @@ export function useUpcomingLaunches() {
                     webcasts[0]?.videoId
                   ) {
                     const vid = webcasts[0].videoId;
-                    out.webcastUrl = `https://x.com/SpaceX/status/${vid}`;
+                    out.webcastUrl = `https://x.com/i/broadcasts/${vid}`;
                   }
 
                   // Attach timeline blocks when available. The mission API sometimes
